@@ -1,24 +1,227 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
-<title>lautli</title>
-<style>
-  body { font: 18px/1.5 -apple-system, system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; color: #1d1d1f; }
-  a.button { display: inline-block; padding: .6rem 1.2rem; background: #0a5fd8; color: #fff; border-radius: .5rem; text-decoration: none; }
-  a { color: #0a5fd8; }
-  @media (prefers-color-scheme: dark) { body { background: #1d1d1f; color: #f5f5f7; } a { color: #6cb0ff; } }
-</style>
-</head>
-<body>
-<main>
-  <h1>lautli</h1>
-  <p>A macOS menu-bar app that transcribes your Zoom and Teams meetings in Swiss German and writes a Standard German transcript and summary. Everything runs on your Mac. Audio is never saved and nothing is sent to a server.</p>
-  <p><a class="button" href="https://github.com/ameetmadan/lautli/releases/latest">Download for macOS</a></p>
-  <p>Requires an Apple Silicon Mac on macOS 15 or newer. Summaries need macOS 26 with Apple Intelligence.</p>
-  <p><a href="https://github.com/ameetmadan/lautli#readme">Install guide</a> · <a href="https://github.com/ameetmadan/lautli/blob/main/PRIVACY.md">Privacy</a></p>
-</main>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <title>lautli: Swiss German transcription for Zoom and Teams on Mac</title>
+    <meta
+      name="description"
+      content="lautli is a free macOS menu-bar app that transcribes Swiss German (Schweizerdeutsch) in Zoom and Microsoft Teams meetings live and offline, then writes a Standard German transcript and summary. Audio never leaves your Mac."
+    />
+    <link rel="canonical" href="https://ameetmadan.github.io/lautli/" />
+    <link
+      rel="alternate"
+      hreflang="en"
+      href="https://ameetmadan.github.io/lautli/"
+    />
+    <link
+      rel="alternate"
+      hreflang="de"
+      href="https://ameetmadan.github.io/lautli/de/"
+    />
+    <link
+      rel="alternate"
+      hreflang="x-default"
+      href="https://ameetmadan.github.io/lautli/"
+    />
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="stylesheet" href="style.css" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="lautli" />
+    <meta
+      property="og:title"
+      content="lautli: Swiss German transcription for Zoom and Teams on Mac"
+    />
+    <meta
+      property="og:description"
+      content="Live, offline Swiss German meeting transcription for macOS. Standard German transcript and summary. Audio never leaves your Mac."
+    />
+    <meta property="og:url" content="https://ameetmadan.github.io/lautli/" />
+    <meta
+      property="og:image"
+      content="https://ameetmadan.github.io/lautli/icon-512.png"
+    />
+    <meta property="og:locale" content="en" />
+    <meta property="og:locale:alternate" content="de" />
+    <meta name="twitter:card" content="summary" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "SoftwareApplication",
+            "name": "lautli",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "macOS 15 or newer, Apple Silicon",
+            "description": "macOS menu-bar app that transcribes Swiss German in Zoom and Microsoft Teams meetings live and on-device, and writes a Standard German transcript and summary.",
+            "url": "https://ameetmadan.github.io/lautli/",
+            "image": "https://ameetmadan.github.io/lautli/icon-512.png",
+            "downloadUrl": "https://github.com/ameetmadan/lautli/releases/latest",
+            "inLanguage": ["en", "de"],
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "How do I transcribe Swiss German in Zoom or Teams?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Install lautli on an Apple Silicon Mac. It notices when a Zoom or Microsoft Teams meeting starts and transcribes the Swiss German speech live, then saves a Standard German transcript to your Documents folder."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Does lautli send my meeting audio to the cloud?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No. Speech recognition runs on your Mac, audio is never saved, and the app has no telemetry. The only network use is the one-time download of the runtime and speech model on first launch."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Which Macs and macOS versions does lautli support?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Apple Silicon Macs (M1 or newer) on macOS 15 or newer. Intel Macs are not supported. Standard German meeting notes need macOS 26 or newer with Apple Intelligence turned on."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is lautli free?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. You can download it from GitHub at no cost."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <header>
+      <a href="./"><strong>lautli</strong></a>
+      <nav aria-label="Language">
+        <a href="de/" hreflang="de" lang="de">Deutsch</a>
+      </nav>
+    </header>
+    <main>
+      <h1>Swiss German transcription for Zoom and Teams meetings on Mac</h1>
+      <p class="lead">
+        lautli is a free menu-bar app for macOS. It listens to your Zoom or
+        Microsoft Teams meeting, transcribes the Swiss German (Schweizerdeutsch)
+        live, and writes a Standard German transcript and summary. Everything
+        runs on your Mac.
+      </p>
+      <p>
+        <a
+          class="button"
+          href="https://github.com/ameetmadan/lautli/releases/latest"
+          >Download for macOS</a
+        >
+      </p>
+      <p class="note">
+        Apple Silicon (M1 or newer), macOS 15 or newer. About 7 GB of free disk
+        space for the first launch.
+      </p>
+
+      <h2>What it does</h2>
+      <ul>
+        <li>
+          <strong>Swiss German speech to text.</strong> Dialect speech becomes
+          readable text, live, while the meeting runs.
+        </li>
+        <li>
+          <strong>Standard German output.</strong> You get a Hochdeutsch
+          transcript as a Markdown file in <code>~/Documents/lautli/</code>.
+        </li>
+        <li>
+          <strong>Meeting notes.</strong> A summary with decisions, tasks and
+          open questions, written by Apple's on-device model on macOS 26 or
+          newer with Apple Intelligence.
+        </li>
+        <li>
+          <strong>Starts by itself.</strong> It detects Zoom and Teams meetings
+          and shows its state in the menu bar.
+        </li>
+        <li><strong>English and German interface.</strong></li>
+      </ul>
+
+      <h2>Private by design</h2>
+      <p>
+        Speech recognition runs offline on your Mac. Audio is converted to text
+        in memory and never saved. There is no telemetry and nothing is
+        uploaded. That makes lautli a fit for confidential meetings where cloud
+        transcription is not an option. See the
+        <a href="https://github.com/ameetmadan/lautli/blob/main/PRIVACY.md"
+          >privacy policy</a
+        >.
+      </p>
+
+      <h2>How it works</h2>
+      <ol>
+        <li>Download the DMG, drag lautli to Applications and open it.</li>
+        <li>
+          On first launch it downloads the speech model once (about 4 GB) and
+          explains each permission before macOS asks.
+        </li>
+        <li>
+          Join a Zoom or Teams meeting. lautli starts listening and the
+          transcript appears live.
+        </li>
+        <li>
+          When the meeting ends, open the transcript and notes from the menu
+          bar.
+        </li>
+      </ol>
+
+      <h2>Frequently asked questions</h2>
+      <h3>How do I transcribe Swiss German in Zoom or Teams?</h3>
+      <p>
+        Install lautli on an Apple Silicon Mac. It notices when a Zoom or
+        Microsoft Teams meeting starts and transcribes the Swiss German speech
+        live, then saves a Standard German transcript to your Documents folder.
+      </p>
+      <h3>Does lautli send my meeting audio to the cloud?</h3>
+      <p>
+        No. Speech recognition runs on your Mac, audio is never saved, and the
+        app has no telemetry. The only network use is the one-time download of
+        the runtime and speech model on first launch.
+      </p>
+      <h3>Which Macs and macOS versions does lautli support?</h3>
+      <p>
+        Apple Silicon Macs (M1 or newer) on macOS 15 or newer. Intel Macs are
+        not supported. Standard German meeting notes need macOS 26 or newer with
+        Apple Intelligence turned on. Without it you still get the full
+        transcript.
+      </p>
+      <h3>Is lautli free?</h3>
+      <p>Yes. You can download it from GitHub at no cost.</p>
+
+      <div class="card">
+        <strong>Early release.</strong> The model has been tested on synthetic
+        Standard German, not yet on real Swiss German meetings or real Zoom and
+        Teams calls. Review transcripts before you rely on them. Use headphones:
+        without echo cancellation, speakers can make lines appear twice.
+        Transcribing a conversation can require everyone's consent, so tell
+        participants.
+      </div>
+    </main>
+    <footer>
+      <a href="https://github.com/ameetmadan/lautli#readme">Install guide</a> ·
+      <a href="https://github.com/ameetmadan/lautli/blob/main/PRIVACY.md"
+        >Privacy</a
+      >
+      · <a href="https://github.com/ameetmadan/lautli">Source on GitHub</a> ·
+      <a href="https://github.com/ameetmadan/lautli/issues">Report a problem</a>
+    </footer>
+  </body>
 </html>
