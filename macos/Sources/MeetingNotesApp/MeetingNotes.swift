@@ -8,8 +8,8 @@ enum NotesError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .unavailable: "Meeting notes need macOS 26 or newer with Apple Intelligence turned on."
-        case .empty: "The transcript is empty, so there is nothing to summarize."
+        case .unavailable: tr("Meeting notes need macOS 26 or newer with Apple Intelligence turned on.")
+        case .empty: tr("The transcript is empty, so there is nothing to summarize.")
         }
     }
 }

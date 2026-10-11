@@ -16,9 +16,9 @@ enum SetupStep: Int, CaseIterable, Comparable, Sendable {
 
     var title: String {
         switch self {
-        case .python: "Python runtime"
-        case .dependencies: "Speech libraries"
-        case .model: "Swiss German model"
+        case .python: tr("Python runtime")
+        case .dependencies: tr("Speech libraries")
+        case .model: tr("Swiss German model")
         }
     }
 }
@@ -113,7 +113,7 @@ final class SetupManager: ObservableObject {
             try ensureDiskSpace(markers)
             for step in markers.pending {
                 try Task.checkCancellation()
-                state = .running(SetupProgress(step: step, fraction: nil, detail: "Starting…"))
+                state = .running(SetupProgress(step: step, fraction: nil, detail: tr("Starting…")))
                 markers.invalidate(step)
                 switch step {
                 case .python: try await installPython()
@@ -122,12 +122,12 @@ final class SetupManager: ObservableObject {
                 }
                 try markers.markComplete(step)
                 completed.insert(step)
-                AppLog.write("setup step finished: \(step.title)", paths: paths)
+                AppLog.write("setup step finished: \(step)", paths: paths)
             }
             state = .ready
         } catch {
             AppLog.write("setup failed: \(error.localizedDescription)", paths: paths)
-            state = .failed("\(error.localizedDescription) Check your internet connection and try again.")
+            state = .failed(tr("\(error.localizedDescription) Check your internet connection and try again."))
         }
     }
 
@@ -150,12 +150,12 @@ final class SetupManager: ObservableObject {
         let archive = paths.runtime.appending(path: "python.tar.gz")
         defer { try? FileManager.default.removeItem(at: archive) }
         let downloader = FileDownloader(destination: archive) { [weak self] fraction in
-            Task { @MainActor in self?.update(.python, fraction: fraction, detail: "Downloading Python…") }
+            Task { @MainActor in self?.update(.python, fraction: fraction, detail: tr("Downloading Python…")) }
         }
         try await downloader.download(PythonRuntime.url)
-        update(.python, fraction: nil, detail: "Verifying download…")
-        guard try Self.sha256(of: archive) == PythonRuntime.sha256 else { throw SetupError.checksum("Python runtime") }
-        update(.python, fraction: nil, detail: "Unpacking Python…")
+        update(.python, fraction: nil, detail: tr("Verifying download…"))
+        guard try Self.sha256(of: archive) == PythonRuntime.sha256 else { throw SetupError.checksum(SetupStep.python.title) }
+        update(.python, fraction: nil, detail: tr("Unpacking Python…"))
         let staging = paths.runtime.appending(path: "staging", directoryHint: .isDirectory)
         try? FileManager.default.removeItem(at: staging)
         try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
@@ -167,7 +167,7 @@ final class SetupManager: ObservableObject {
     }
 
     private func installDependencies() async throws {
-        update(.dependencies, fraction: nil, detail: "Installing speech libraries (about 1 GB)…")
+        update(.dependencies, fraction: nil, detail: tr("Installing speech libraries (about 1 GB)…"))
         let log = paths.logs.appending(path: "setup.log")
         try FileManager.default.createDirectory(at: paths.logs, withIntermediateDirectories: true)
         try await ProcessRunner.run(
@@ -182,7 +182,7 @@ final class SetupManager: ObservableObject {
     }
 
     private func downloadModel() async throws {
-        update(.model, fraction: 0, detail: "Downloading the Swiss German model (about 3 GB)…")
+        update(.model, fraction: 0, detail: tr("Downloading the Swiss German model (about 3 GB)…"))
         let log = paths.logs.appending(path: "setup.log")
         try FileManager.default.createDirectory(at: paths.modelDirectory, withIntermediateDirectories: true)
         let failureBox = FailureBox()
@@ -196,8 +196,8 @@ final class SetupManager: ObservableObject {
                 Self.append(line, to: log)
                 guard let event = SetupEvent(line: line) else { return }
                 switch event {
-                case .progress(let fraction): Task { @MainActor in self?.update(.model, fraction: fraction, detail: Self.percent(fraction, "Downloading the Swiss German model…")) }
-                case .verifying: Task { @MainActor in self?.update(.model, fraction: nil, detail: "Verifying the model…") }
+                case .progress(let fraction): Task { @MainActor in self?.update(.model, fraction: fraction, detail: Self.percent(fraction, tr("Downloading the Swiss German model…"))) }
+                case .verifying: Task { @MainActor in self?.update(.model, fraction: nil, detail: tr("Verifying the model…")) }
                 case .failed(let message): failureBox.set(message)
                 case .done: break
                 }
@@ -232,9 +232,9 @@ enum SetupError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .diskSpace: "Meeting Notes needs about 7 GB of free disk space for the speech model and libraries."
-        case .checksum(let name): "The downloaded \(name) failed its integrity check."
-        case .model(let message): "The model download failed: \(message)."
+        case .diskSpace: tr("Meeting Notes needs about 7 GB of free disk space for the speech model and libraries.")
+        case .checksum(let name): tr("The downloaded \(name) failed its integrity check.")
+        case .model(let message): tr("The model download failed: \(message).")
         }
     }
 }
@@ -251,7 +251,7 @@ enum SetupEvent: Equatable {
             self = .progress(min(1, bytes / total))
         case "verifying": self = .verifying
         case "done": self = .done
-        case "failed": self = .failed(object["message"] as? String ?? "unknown error")
+        case "failed": self = .failed(object["message"] as? String ?? tr("unknown error"))
         default: return nil
         }
     }

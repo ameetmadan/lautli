@@ -14,6 +14,7 @@ rm -rf "$app_bundle"
 mkdir -p "$app_bundle/Contents/MacOS" "$app_bundle/Contents/Resources/worker-src/scripts"
 cp "$repo_root/macos/.build/release/MeetingNotesApp" "$app_bundle/Contents/MacOS/MeetingNotesApp"
 cp "$repo_root/macos/Info.plist" "$app_bundle/Contents/Info.plist"
+cp -R "$repo_root"/macos/Resources/*.lproj "$app_bundle/Contents/Resources/"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${version#v}" "$app_bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $build_number" "$app_bundle/Contents/Info.plist"
 

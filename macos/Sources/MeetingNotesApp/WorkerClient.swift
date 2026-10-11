@@ -95,7 +95,7 @@ final class WorkerClient: ObservableObject {
                 guard finished === self.process else { return }
                 self.drainPendingOutput()
                 if finished.terminationStatus != 0 {
-                    self.state = .failed("Local transcription worker exited unexpectedly.")
+                    self.state = .failed(tr("Local transcription worker exited unexpectedly."))
                     AppLog.write("worker exited with status \(finished.terminationStatus)", paths: self.paths)
                 } else { self.state = .stopped }
                 self.onStopComplete?()
@@ -103,7 +103,7 @@ final class WorkerClient: ObservableObject {
             }
         }
         do { try process.run() }
-        catch { state = .failed("Could not start local worker: \(error.localizedDescription)") }
+        catch { state = .failed(tr("Could not start local worker: \(error.localizedDescription)")) }
     }
 
     /// Replaces a failed or stopped worker with a fresh process.
@@ -131,7 +131,7 @@ final class WorkerClient: ObservableObject {
         if stream.samples.isEmpty { stream.startMs = startMs }
         stream.samples.append(contentsOf: samples)
         guard stream.samples.count <= 30 * 16_000 else {
-            state = .failed("Audio worker fell behind by 30 seconds. Capture stopped to preserve speech.")
+            state = .failed(tr("Audio worker fell behind by 30 seconds. Capture stopped to preserve speech."))
             return
         }
         if stream.samples.count >= 10 * 16_000 {
@@ -192,7 +192,7 @@ final class WorkerClient: ObservableObject {
         guard JSONSerialization.isValidJSONObject(message),
               let data = try? JSONSerialization.data(withJSONObject: message, options: [.sortedKeys]),
               data.count <= 4 * 1024 * 1024 else {
-            state = .failed("Audio window could not be encoded within the protocol limit.")
+            state = .failed(tr("Audio window could not be encoded within the protocol limit."))
             return nil
         }
         return data + Data([0x0A])
@@ -202,7 +202,7 @@ final class WorkerClient: ObservableObject {
         let fileHandle = input.fileHandleForWriting
         writer.async { [weak self] in
             do { try fileHandle.write(contentsOf: data) }
-            catch { Task { @MainActor [weak self] in self?.state = .failed("Local worker stopped accepting audio.") } }
+            catch { Task { @MainActor [weak self] in self?.state = .failed(tr("Local worker stopped accepting audio.")) } }
             Task { @MainActor [weak self] in self?.writeBusy = false }
         }
     }
@@ -214,7 +214,7 @@ final class WorkerClient: ObservableObject {
             outputRemainder.removeSubrange(...newline)
             guard let value = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any],
                   let type = value["type"] as? String else {
-                state = .failed("Worker sent malformed output; transcription stopped.")
+                state = .failed(tr("Worker sent malformed output; transcription stopped."))
                 stop()
                 return
             }
@@ -228,13 +228,13 @@ final class WorkerClient: ObservableObject {
                         onStopComplete = nil
                     }
                 case "transcribing", "behind": state = .transcribing
-                case "failed": state = .failed(value["message"] as? String ?? "Local worker failed.")
-                default: state = .failed("Worker sent an unknown status.")
+                case "failed": state = .failed(value["message"] as? String ?? tr("Local worker failed."))
+                default: state = .failed(tr("Worker sent an unknown status."))
                 }
             } else if type == "segment" {
                 onSegment?(value)
             } else {
-                state = .failed("Worker sent an unknown message.")
+                state = .failed(tr("Worker sent an unknown message."))
                 stop()
                 return
             }

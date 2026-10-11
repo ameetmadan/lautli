@@ -23,14 +23,17 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("General") {
+                Picker("Language", selection: $model.language) {
+                    ForEach(AppLanguage.allCases) { Text($0.displayName).tag($0) }
+                }
                 Toggle("Open Meeting Notes when I log in", isOn: Binding(get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) }))
                 Toggle("I will tell participants that meetings are transcribed", isOn: $model.recordingNoticeAcknowledged)
                 Button("Export diagnostics…") {
                     do {
                         let archive = try Diagnostics.export()
                         NSWorkspace.shared.activateFileViewerSelecting([archive])
-                        message = "Saved \(archive.lastPathComponent) to your Desktop. It contains logs only, no transcripts or audio."
-                    } catch { message = "Could not export diagnostics: \(error.localizedDescription)" }
+                        message = tr("Saved \(archive.lastPathComponent) to your Desktop. It contains logs only, no transcripts or audio.")
+                    } catch { message = tr("Could not export diagnostics: \(error.localizedDescription)") }
                 }
                 if let message { Text(message).font(.caption).foregroundStyle(.secondary) }
             }

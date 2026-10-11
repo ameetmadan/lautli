@@ -23,7 +23,7 @@ A Mac managed by your employer may block unnotarized apps entirely. Ask your IT 
 
 The app walks you through everything:
 
-1. **Welcome.** Read the recording notice and confirm you will tell participants that meetings are transcribed.
+1. **Welcome.** Choose English or German, read the recording notice and confirm you will tell participants that meetings are transcribed.
 2. **Download.** It downloads a private Python runtime, the speech libraries and the Swiss German model (about 4 GB, one time). The download resumes if it is interrupted.
 3. **Permissions.** Each one is explained before macOS asks: Microphone (your voice), Screen Recording (only to hear Zoom or Teams audio, nothing on screen is recorded) and Accessibility (to notice that a meeting started).
 4. **Try it.** Play a Swiss German video in your browser and watch the transcript appear.
@@ -36,7 +36,7 @@ Afterwards Meeting Notes sits in the menu bar. It starts by itself when a Zoom o
 - **Listen to an app.** If automatic detection misses a call, choose the meeting app manually.
 - **Transcript window.** Live text with copy and export. After a meeting ends, **Open transcript** and **Show in Finder** appear.
 - **Where files go.** `~/Documents/Meeting Notes/` holds `Transkript <date>.md` and, on macOS 26+, `Notizen <date>.md` with a summary, decisions, tasks and open questions. Review notes before sharing them: a local model wrote them.
-- **Settings.** Permissions status, microphone choice, launch at login and **Export diagnostics**.
+- **Settings.** Language (English or German, switches immediately), permissions status, microphone choice, launch at login and **Export diagnostics**. The app language does not change transcripts or notes.
 
 Use headphones. With speakers the microphone hears the other participants too and lines can appear twice. There is no echo cancellation.
 

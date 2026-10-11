@@ -24,12 +24,12 @@ enum MenuState: Equatable {
 
     var accessibilityName: String {
         switch self {
-        case .settingUp: "Setting up"
-        case .loadingModel: "Loading model"
-        case .idle: "Idle"
-        case .listening: "Listening"
-        case .paused: "Paused"
-        case .error: "Problem"
+        case .settingUp: tr("Setting up")
+        case .loadingModel: tr("Loading model")
+        case .idle: tr("Idle")
+        case .listening: tr("Listening")
+        case .paused: tr("Paused")
+        case .error: tr("Problem")
         }
     }
 }
@@ -53,6 +53,9 @@ final class MenuBarModel: ObservableObject {
     @Published private(set) var manualApp: RunningApp?
     @Published var recordingNoticeAcknowledged = UserDefaults.standard.bool(forKey: "recordingNoticeAcknowledged") {
         didSet { UserDefaults.standard.set(recordingNoticeAcknowledged, forKey: "recordingNoticeAcknowledged") }
+    }
+    @Published var language: AppLanguage = .current {
+        didSet { AppLanguage.persist(language) }
     }
     @Published var onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted") {
         didSet { UserDefaults.standard.set(onboardingCompleted, forKey: "onboardingCompleted") }
@@ -92,7 +95,7 @@ final class MenuBarModel: ObservableObject {
             do {
                 try self.sessionStore?.append(.init(id: id, startMs: startMs, endMs: endMs, text: text, source: segment["source"] as? String))
             } catch {
-                self.storageError = "Could not save transcript snippets: \(error.localizedDescription)"
+                self.storageError = tr("Could not save transcript snippets: \(error.localizedDescription)")
             }
         }
         // Views read nested models through this one, so their changes must invalidate it too.
@@ -162,7 +165,7 @@ final class MenuBarModel: ObservableObject {
                     storageError = nil
                     transcriptLines.removeAll()
                 } catch {
-                    storageError = "Could not create a transcript in Documents: \(error.localizedDescription)"
+                    storageError = tr("Could not create a transcript in Documents: \(error.localizedDescription)")
                     isStartingCapture = false
                     return
                 }
@@ -324,7 +327,7 @@ final class MenuBarModel: ObservableObject {
             sessionStore = nil
         } catch {
             let recoveryPath = sessionStore?.workingDirectoryPath ?? "Documents/Meeting Notes"
-            storageError = "Could not merge transcript: \(error.localizedDescription). Text snippets remain at \(recoveryPath)"
+            storageError = tr("Could not merge transcript: \(error.localizedDescription). Text snippets remain at \(recoveryPath)")
             sessionStore = nil
         }
         sessionEndMs = 0
@@ -387,7 +390,7 @@ final class MenuBarModel: ObservableObject {
         panel.nameFieldStringValue = "Transkript.txt"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do { try Data(liveTranscriptText.utf8).write(to: url, options: .atomic) }
-        catch { storageError = "Could not export transcript: \(error.localizedDescription)" }
+        catch { storageError = tr("Could not export transcript: \(error.localizedDescription)") }
     }
 
     // MARK: Worker, login item, shutdown
@@ -403,7 +406,7 @@ final class MenuBarModel: ObservableObject {
         do {
             if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
         } catch {
-            storageError = "Could not change launch at login: \(error.localizedDescription)"
+            storageError = tr("Could not change launch at login: \(error.localizedDescription)")
         }
         objectWillChange.send()
     }
@@ -427,7 +430,7 @@ final class MenuBarModel: ObservableObject {
             if let url = try sessionStore?.finalize() { savedTranscriptURL = url }
             sessionStore = nil
         } catch {
-            storageError = "Could not merge transcript in Documents: \(error.localizedDescription)"
+            storageError = tr("Could not merge transcript in Documents: \(error.localizedDescription)")
         }
     }
 
@@ -448,19 +451,19 @@ final class MenuBarModel: ObservableObject {
     var statusText: String {
         switch menuState {
         case .error(let message): return message
-        case .settingUp: return "Set-up is not finished"
-        case .loadingModel: return "Loading the local Swiss German model…"
-        case .paused: return "Paused. Nothing is being recorded."
+        case .settingUp: return tr("Set-up is not finished")
+        case .loadingModel: return tr("Loading the local Swiss German model…")
+        case .paused: return tr("Paused. Nothing is being recorded.")
         case .listening:
-            if browserTestBundleIdentifier != nil { return "Testing browser audio locally" }
-            return "Listening locally"
+            if browserTestBundleIdentifier != nil { return tr("Testing browser audio locally") }
+            return tr("Listening locally")
         case .idle:
-            if consentRequired { return "Read the recording notice to start" }
-            if manuallyListening { return "Waiting for the meeting to start" }
+            if consentRequired { return tr("Read the recording notice to start") }
+            if manuallyListening { return tr("Waiting for the meeting to start") }
             return switch monitor.detectionState {
-            case .idle: "Waiting for Zoom or Teams"
-            case .candidate: "Checking for an active meeting…"
-            case .capturing: "Meeting detected — capture is being prepared"
+            case .idle: tr("Waiting for Zoom or Teams")
+            case .candidate: tr("Checking for an active meeting…")
+            case .capturing: tr("Meeting detected. Preparing capture…")
             case .failed(let message): message
             }
         }

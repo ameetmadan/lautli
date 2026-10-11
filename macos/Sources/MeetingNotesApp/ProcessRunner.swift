@@ -29,7 +29,7 @@ enum ProcessRunner {
     struct Failure: Error, LocalizedError {
         let status: Int32
         let lastLine: String
-        var errorDescription: String? { "Exited with status \(status). \(lastLine)" }
+        var errorDescription: String? { tr("Exited with status \(Int(status)). \(lastLine)") }
     }
 
     /// Runs a tool to completion, delivering each line of combined stdout/stderr.
