@@ -4,6 +4,8 @@ struct SettingsView: View {
     @ObservedObject var model: MenuBarModel
     @AppStorage(MicrophoneChoice.preferenceKey) private var microphoneID = ""
     @State private var message: String?
+    @State private var connectMessage: String?
+    private let connect = McpConnect(paths: .standard)
 
     var body: some View {
         Form {
@@ -37,13 +39,28 @@ struct SettingsView: View {
                 }
                 if let message { Text(message).font(.caption).foregroundStyle(.secondary) }
             }
+            Section("Connect to AI app") {
+                Text("Let Claude, Codex or Cursor read your meeting transcripts on this Mac, for example to turn action points into tasks. Copy the setup for your app and paste it there. The text of a meeting is then visible to that AI provider, so only connect apps you trust with it. Keep the approval prompt on for actions that change things, because a meeting transcript contains other people's words.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Button("Copy command for Claude Code") { copy(connect.claudeCodeCommand) }.disabled(!connect.isReady)
+                Button("Copy config for Codex") { copy(connect.codexConfig) }.disabled(!connect.isReady)
+                Button("Copy config for Claude Desktop or Cursor") { copy(connect.jsonConfig) }.disabled(!connect.isReady)
+                if !connect.isReady { Text("Finish setting up lautli first.").font(.caption).foregroundStyle(.secondary) }
+                if let connectMessage { Text(connectMessage).font(.caption).foregroundStyle(.secondary) }
+            }
         }
         .formStyle(.grouped)
-        .frame(width: 520, height: 640)
+        .frame(width: 520, height: 800)
         .onAppear {
             NSApp.activate(ignoringOtherApps: true)
             model.permissions.startPolling()
         }
         .onDisappear { model.permissions.stopPolling() }
+    }
+
+    private func copy(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        connectMessage = tr("Copied. If you move lautli to another folder, copy it again.")
     }
 }

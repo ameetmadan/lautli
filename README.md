@@ -40,6 +40,14 @@ Afterwards lautli sits in the menu bar. It starts by itself when a Zoom or Teams
 
 Use headphones. With speakers the microphone hears the other participants too and lines can appear twice. There is no echo cancellation.
 
+## Use your transcripts with an AI app
+
+**Settings → Connect to AI app** copies the setup for Claude Code, Codex, Claude Desktop or Cursor. Paste it into that app once, restart it, and ask things like "list my meetings from this week" or "turn the action points from yesterday's standup into tasks". If the app also has a task tool such as Asana connected, it can create the tasks itself.
+
+The connection is a small read-only server that runs on your Mac and offers four tools: `list_meetings`, `get_transcript`, `get_notes` and `search_meetings`. It reads `~/Documents/lautli/` and nothing else. lautli itself never sends anything anywhere. Once your AI app reads a transcript, though, that app's provider sees the text, so only connect apps you trust with your meetings. A transcript contains other people's words, so keep the approval prompt on for any action that changes something.
+
+macOS may ask whether your AI app can access your Documents folder. Allow it. Setup must be finished first. If you move lautli to another folder, copy the setup again.
+
 ## Troubleshooting
 
 | Problem | What to do |
