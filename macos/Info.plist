@@ -13,6 +13,8 @@
 		<string>en</string>
 		<string>de</string>
 	</array>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleName</key>
 	<string>lautli</string>
 	<key>CFBundlePackageType</key>

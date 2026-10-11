@@ -15,6 +15,7 @@ mkdir -p "$app_bundle/Contents/MacOS" "$app_bundle/Contents/Resources/worker-src
 cp "$repo_root/macos/.build/release/LautliApp" "$app_bundle/Contents/MacOS/LautliApp"
 cp "$repo_root/macos/Info.plist" "$app_bundle/Contents/Info.plist"
 cp -R "$repo_root"/macos/Resources/*.lproj "$app_bundle/Contents/Resources/"
+cp "$repo_root/macos/Resources/AppIcon.icns" "$app_bundle/Contents/Resources/"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${version#v}" "$app_bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $build_number" "$app_bundle/Contents/Info.plist"
 

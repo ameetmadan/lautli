@@ -11,6 +11,8 @@ trap 'rm -rf "$staging"' EXIT
 
 cp -R "$repo_root/dist/lautli.app" "$staging/"
 ln -s /Applications "$staging/Applications"
+cp "$repo_root/macos/Resources/AppIcon.icns" "$staging/.VolumeIcon.icns"
+SetFile -a C "$staging"
 rm -f "$dmg"
 hdiutil create -volname "lautli" -srcfolder "$staging" -ov -format UDZO "$dmg" >/dev/null
 
