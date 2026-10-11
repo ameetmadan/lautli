@@ -51,7 +51,7 @@ def serve(input_stream: TextIO, output_stream: TextIO, recognize) -> int:
             emit({"type": "status", "state": "failed", "message": str(error)})
             return 2
         if isinstance(message, Stop):
-            if session_id != message.session_id:
+            if session_id is not None and session_id != message.session_id:
                 emit({"type": "status", "state": "failed", "message": "Session ID mismatch"})
                 return 2
             if transcriber:

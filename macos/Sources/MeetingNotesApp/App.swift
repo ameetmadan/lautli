@@ -13,6 +13,8 @@ final class MenuBarModel: ObservableObject {
     @Published var automaticStartEnabled = true
     @Published var manuallyListening = false
     @Published var transcriptLines: [String] = []
+    @Published private(set) var savedTranscriptURL: URL?
+    @Published private(set) var storageError: String?
     @Published fileprivate var captureSuppressed = false
     @Published private(set) var browserTestBundleIdentifier: String?
     let monitor = MeetingMonitor()
@@ -20,6 +22,12 @@ final class MenuBarModel: ObservableObject {
     let worker = WorkerClient()
     private var meetingSubscription: AnyCancellable?
     private var workerSubscription: AnyCancellable?
+    private var sessionStore: TranscriptSessionStore?
+    private var isStartingCapture = false
+    private var isStoppingCapture = false
+    private var isShuttingDown = false
+    private var startTask: Task<Void, Never>?
+    private var stopCompletions: [() -> Void] = []
 
     init() {
         audioCapture.onSamples = { [weak worker] source, timestamp, samples in
@@ -28,8 +36,17 @@ final class MenuBarModel: ObservableObject {
         worker.onSegment = { [weak self] message in
             guard let segment = message["segment"] as? [String: Any],
                   segment["stability"] as? String == "final",
-                  let text = segment["text"] as? String else { return }
-            self?.transcriptLines.append(text)
+                  let id = segment["id"] as? String,
+                  let text = segment["text"] as? String,
+                  let startMs = segment["start_ms"] as? Int64,
+                  let endMs = segment["end_ms"] as? Int64 else { return }
+            guard let self else { return }
+            self.transcriptLines.append(text)
+            do {
+                try self.sessionStore?.append(.init(id: id, startMs: startMs, endMs: endMs, text: text, source: segment["source"] as? String))
+            } catch {
+                self.storageError = "Could not save transcript snippets: \(error.localizedDescription)"
+            }
         }
         monitor.start()
         let projectRoot = Bundle.main.infoDictionary?["MeetingNotesProjectRoot"] as? String
@@ -47,19 +64,45 @@ final class MenuBarModel: ObservableObject {
     }
 
     func updateCapture(for bundleIdentifier: String?) {
+        guard !isShuttingDown else { return }
         let selectedBundleIdentifier = browserTestBundleIdentifier ?? bundleIdentifier
         if selectedBundleIdentifier == nil { captureSuppressed = false }
         let isBrowserTest = browserTestBundleIdentifier != nil
         let canStart = !captureSuppressed && (isBrowserTest || automaticStartEnabled || manuallyListening)
         if let selectedBundleIdentifier, canStart, worker.state == .ready {
-            Task { await audioCapture.start(bundleIdentifier: selectedBundleIdentifier, captureMicrophone: !isBrowserTest) }
-        } else if selectedBundleIdentifier == nil || !canStart || isWorkerFailed {
-            if audioCapture.state == .capturing {
-                Task {
-                    await audioCapture.stop()
-                    worker.stop()
+            if audioCapture.state == .capturing, audioCapture.activeBundleIdentifier == selectedBundleIdentifier { return }
+            if audioCapture.state == .capturing || isStoppingCapture {
+                finishCapture { [weak self] in self?.updateCapture(for: self?.monitor.activeMeetingBundleIdentifier) }
+                return
+            }
+            guard !isStartingCapture else { return }
+            if sessionStore != nil {
+                finishCapture { [weak self] in self?.updateCapture(for: self?.monitor.activeMeetingBundleIdentifier) }
+                return
+            }
+            isStartingCapture = true
+            do {
+                sessionStore = try TranscriptSessionStore()
+                storageError = nil
+            } catch {
+                storageError = "Could not create a transcript in Documents: \(error.localizedDescription)"
+                isStartingCapture = false
+                return
+            }
+            startTask = Task { [weak self] in
+                guard let self else { return }
+                await self.audioCapture.start(bundleIdentifier: selectedBundleIdentifier, captureMicrophone: !isBrowserTest)
+                self.isStartingCapture = false
+                self.startTask = nil
+                if self.audioCapture.state != .capturing {
+                    self.sessionStore?.discard()
+                    self.sessionStore = nil
+                } else if !self.isShuttingDown {
+                    self.updateCapture(for: self.monitor.activeMeetingBundleIdentifier)
                 }
             }
+        } else if selectedBundleIdentifier == nil || !canStart || isWorkerFailed {
+            if !isStartingCapture && (audioCapture.state == .capturing || sessionStore != nil) { finishCapture() }
         }
     }
 
@@ -88,7 +131,47 @@ final class MenuBarModel: ObservableObject {
 
     func stopBrowserTest() {
         browserTestBundleIdentifier = nil
-        updateCapture(for: monitor.activeMeetingBundleIdentifier)
+        captureSuppressed = true
+        finishCapture { [weak self] in
+            self?.captureSuppressed = false
+            self?.updateCapture(for: self?.monitor.activeMeetingBundleIdentifier)
+        }
+    }
+
+    func stopListening() {
+        captureSuppressed = true
+        finishCapture()
+    }
+
+    private func finishCapture(completion: (() -> Void)? = nil) {
+        if isStoppingCapture {
+            if let completion { stopCompletions.append(completion) }
+            return
+        }
+        isStoppingCapture = true
+        Task { [weak self] in
+            guard let self else { return }
+            await audioCapture.stop()
+            worker.stop { [weak self] in
+                self?.completeCaptureStop(completion: completion)
+            }
+        }
+    }
+
+    private func completeCaptureStop(completion: (() -> Void)?) {
+        do {
+            if let url = try sessionStore?.finalize() { savedTranscriptURL = url }
+            sessionStore = nil
+        } catch {
+            let recoveryPath = sessionStore?.workingDirectoryPath ?? "Documents/Meeting Notes"
+            storageError = "Could not merge transcript: \(error.localizedDescription). Text snippets remain at \(recoveryPath)"
+            sessionStore = nil
+        }
+        isStoppingCapture = false
+        completion?()
+        let queuedCompletions = stopCompletions
+        stopCompletions.removeAll()
+        queuedCompletions.forEach { $0() }
     }
 
     private var isWorkerFailed: Bool {
@@ -96,13 +179,25 @@ final class MenuBarModel: ObservableObject {
         return false
     }
 
-    func shutdown() {
+    func shutdown() async {
+        isShuttingDown = true
         monitor.stop()
+        await startTask?.value
+        await audioCapture.stop()
+        await withCheckedContinuation { continuation in
+            worker.stop { continuation.resume() }
+        }
         worker.terminate()
-        Task { await audioCapture.stop() }
+        do {
+            if let url = try sessionStore?.finalize() { savedTranscriptURL = url }
+            sessionStore = nil
+        } catch {
+            storageError = "Could not merge transcript in Documents: \(error.localizedDescription)"
+        }
     }
 
     var statusText: String {
+        if let storageError { return storageError }
         if browserTestBundleIdentifier != nil, audioCapture.state == .capturing { return "Testing browser audio locally" }
         if captureSuppressed { return "Listening paused" }
         if case .failed(let message) = audioCapture.state { return message }
@@ -148,6 +243,11 @@ struct MeetingNotesApp: App {
                         }
                     }.frame(maxHeight: 180)
                 }
+                if let savedURL = model.savedTranscriptURL {
+                    Text("Saved to \(savedURL.path)")
+                        .font(.caption2)
+                        .textSelection(.enabled)
+                }
                 Toggle("Start automatically for Zoom and Teams", isOn: $model.automaticStartEnabled)
                     .onChange(of: model.automaticStartEnabled) { _, _ in
                         model.updateCapture(for: model.monitor.activeMeetingBundleIdentifier)
@@ -171,10 +271,7 @@ struct MeetingNotesApp: App {
                     Button(model.audioCapture.state == .capturing ? "Stop listening" : "Resume listening") {
                         if model.audioCapture.state == .capturing {
                             model.captureSuppressed = true
-                            Task {
-                                await model.audioCapture.stop()
-                                model.worker.stop()
-                            }
+                            model.stopListening()
                         } else {
                             model.manuallyListening = true
                             model.captureSuppressed = false
@@ -183,8 +280,10 @@ struct MeetingNotesApp: App {
                     }
                 }
                 Button("Quit") {
-                    model.shutdown()
-                    NSApplication.shared.terminate(nil)
+                    Task {
+                        await model.shutdown()
+                        NSApplication.shared.terminate(nil)
+                    }
                 }
             }
             .padding(16)

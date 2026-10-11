@@ -24,11 +24,11 @@ open "dist/Meeting Notes.app"
 
 The first model load can take a while. The menu bar shows model loading before it enables automatic meeting capture. macOS asks for microphone and Screen Recording access; allow both. For automatic Zoom/Teams detection, also choose **Allow meeting detection…** in the menu and enable Accessibility access in System Settings. The app waits for meeting controls and app audio before starting.
 
-The menu-bar indicator is visible while capture runs. Finalized transcript lines appear in the menu. Closing the menu does not stop capture; use the menu's stop/quit action to end the process.
+The menu-bar indicator is visible while capture runs. The worker transcribes overlapping 10-second audio windows and finalizes text as later windows confirm it. Closing the menu does not stop capture. Stop listening, stop the browser test, or quit to merge that session into one timestamp-ordered Markdown file under `~/Documents/Meeting Notes/`. Temporary text snippets are deleted after the merge. Audio is never saved.
 
 ## Test with YouTube audio
 
-Open a Swiss German SRF video in Safari, Chrome, Firefox, Edge, Brave, or Arc and start playback. Open the Meeting Notes menu and choose **Test with a Swiss German video…**, then select that browser. This captures that browser's output audio only (not your microphone) and streams it through the same local Whisper worker. Select **Stop YouTube test** when finished. The browser test transcript is shown in the menu and is not saved as a recording.
+Open a Swiss German SRF video in Safari, Chrome, Firefox, Edge, Brave, or Arc and start playback. Open the Meeting Notes menu and choose **Test with a Swiss German video…**, then select that browser. This captures that browser's output audio only (not your microphone) and streams it through the same local Whisper worker. Select **Stop YouTube test** when finished. The test transcript is merged into a Markdown file in `~/Documents/Meeting Notes/`, just like a meeting transcript.
 
 ## Development checks
 

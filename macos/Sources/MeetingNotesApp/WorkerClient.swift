@@ -1,5 +1,34 @@
 import Foundation
 
+private final class WorkerOutputBuffer: @unchecked Sendable {
+    private let lock = NSLock()
+    private var data = Data()
+    private var drainScheduled = false
+
+    func append(_ bytes: Data) -> Bool {
+        guard !bytes.isEmpty else { return false }
+        lock.lock()
+        data.append(bytes)
+        let shouldSchedule = !drainScheduled
+        drainScheduled = true
+        lock.unlock()
+        return shouldSchedule
+    }
+
+    func nextChunk() -> Data? {
+        lock.lock()
+        guard !data.isEmpty else {
+            drainScheduled = false
+            lock.unlock()
+            return nil
+        }
+        let chunk = data
+        data = Data()
+        lock.unlock()
+        return chunk
+    }
+}
+
 @MainActor
 final class WorkerClient: ObservableObject {
     enum State: Equatable {
@@ -8,9 +37,12 @@ final class WorkerClient: ObservableObject {
 
     @Published private(set) var state: State = .stopped
     var onSegment: (([String: Any]) -> Void)?
+    var onStopComplete: (() -> Void)?
     private let process = Process()
     private let input = Pipe()
     private let output = Pipe()
+    nonisolated private let outputBuffer = WorkerOutputBuffer()
+    nonisolated private let stdoutReadQueue = DispatchQueue(label: "worker.stdout.reader")
     private var outputRemainder = Data()
     private let sessionID = UUID().uuidString
     private var audioBySource: [AudioSource: (startMs: Int64, samples: [Float])] = [:]
@@ -26,15 +58,28 @@ final class WorkerClient: ObservableObject {
         process.standardInput = input
         process.standardOutput = output
         process.standardError = FileHandle.nullDevice
+        let outputBuffer = self.outputBuffer
+        let stdoutReadQueue = self.stdoutReadQueue
         output.fileHandleForReading.readabilityHandler = { [weak self] handle in
-            let bytes = handle.availableData
-            guard !bytes.isEmpty else { return }
-            Task { @MainActor in self?.consumeOutput(bytes) }
+            stdoutReadQueue.async {
+                let bytes = handle.availableData
+                guard !bytes.isEmpty, outputBuffer.append(bytes) else { return }
+                Task { @MainActor in self?.drainPendingOutput() }
+            }
         }
         process.terminationHandler = { [weak self] process in
+            guard let self else { return }
+            self.output.fileHandleForReading.readabilityHandler = nil
+            self.stdoutReadQueue.sync {
+                let trailingOutput = self.output.fileHandleForReading.readDataToEndOfFile()
+                _ = self.outputBuffer.append(trailingOutput)
+            }
             Task { @MainActor in
-                if process.terminationStatus != 0 { self?.state = .failed("Local transcription worker exited unexpectedly.") }
-                else { self?.state = .stopped }
+                self.drainPendingOutput()
+                if process.terminationStatus != 0 { self.state = .failed("Local transcription worker exited unexpectedly.") }
+                else { self.state = .stopped }
+                self.onStopComplete?()
+                self.onStopComplete = nil
             }
         }
         do { try process.run() }
@@ -79,8 +124,13 @@ final class WorkerClient: ObservableObject {
         enqueue(data)
     }
 
-    func stop() {
-        guard process.isRunning else { return }
+    func stop(completion: (() -> Void)? = nil) {
+        onStopComplete = completion
+        guard process.isRunning else {
+            onStopComplete?()
+            onStopComplete = nil
+            return
+        }
         for (source, stream) in audioBySource where !stream.samples.isEmpty {
             writeAudioWindow(samples: stream.samples, startMs: stream.startMs, source: source)
         }
@@ -132,7 +182,12 @@ final class WorkerClient: ObservableObject {
             if type == "status", let name = value["state"] as? String {
                 switch name {
                 case "loading": state = .starting
-                case "ready": state = .ready
+                case "ready":
+                    state = .ready
+                    if value["message"] as? String == "Transcription stopped" {
+                        onStopComplete?()
+                        onStopComplete = nil
+                    }
                 case "transcribing", "behind": state = .transcribing
                 case "failed": state = .failed(value["message"] as? String ?? "Local worker failed.")
                 default: state = .failed("Worker sent an unknown status.")
@@ -145,5 +200,9 @@ final class WorkerClient: ObservableObject {
                 return
             }
         }
+    }
+
+    private func drainPendingOutput() {
+        while let bytes = outputBuffer.nextChunk() { consumeOutput(bytes) }
     }
 }

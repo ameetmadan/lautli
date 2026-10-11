@@ -7,6 +7,71 @@ private final class SampleBufferBox: @unchecked Sendable {
     init(_ value: CMSampleBuffer) { self.value = value }
 }
 
+private final class PendingSampleDelivery: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+    private var acceptsSamples = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func open() {
+        lock.lock()
+        acceptsSamples = true
+        lock.unlock()
+    }
+
+    func begin() -> Bool {
+        lock.lock()
+        guard acceptsSamples else {
+            lock.unlock()
+            return false
+        }
+        count += 1
+        lock.unlock()
+        return true
+    }
+
+    func close() {
+        lock.lock()
+        acceptsSamples = false
+        lock.unlock()
+    }
+
+    func finish() {
+        lock.lock()
+        count -= 1
+        let ready = count == 0 ? waiters : []
+        if count == 0 { waiters.removeAll() }
+        lock.unlock()
+        ready.forEach { $0.resume() }
+    }
+
+    func waitUntilDrained() async {
+        await withCheckedContinuation { continuation in
+            lock.lock()
+            if count == 0 {
+                lock.unlock()
+                continuation.resume()
+            } else {
+                waiters.append(continuation)
+                lock.unlock()
+            }
+        }
+    }
+}
+
+struct SessionTimestampNormalizer {
+    private(set) var originMs: Int64?
+    private var lastTimestampBySource: [AudioSource: Int64] = [:]
+
+    mutating func normalize(_ timestampMs: Int64, source: AudioSource) -> Int64 {
+        if originMs == nil { originMs = timestampMs }
+        let elapsed = max(0, timestampMs - (originMs ?? timestampMs))
+        let normalized = max(elapsed, lastTimestampBySource[source].map { $0 + 1 } ?? elapsed)
+        lastTimestampBySource[source] = normalized
+        return normalized
+    }
+}
+
 @MainActor
 final class AudioCapture: NSObject, ObservableObject {
     enum State: Equatable {
@@ -19,13 +84,17 @@ final class AudioCapture: NSObject, ObservableObject {
     let buffer = BoundedAudioBuffer(maxFrames: 30 * 16_000)
     var onSamples: ((AudioSource, Int64, [Float]) -> Void)?
     private(set) var activeBundleIdentifier: String?
+    nonisolated private let pendingSampleDelivery = PendingSampleDelivery()
+    private let sampleHandlerQueue = DispatchQueue(label: "audio.meeting.output")
     private var stream: SCStream?
-    private var lastTimestampBySource: [AudioSource: Int64] = [:]
+    private var timestampNormalizer = SessionTimestampNormalizer()
 
     func start(bundleIdentifier: String, captureMicrophone: Bool = true) async {
         if activeBundleIdentifier == bundleIdentifier, state == .capturing { return }
         if stream != nil { await stop() }
         guard stream == nil else { return }
+        timestampNormalizer = SessionTimestampNormalizer()
+        pendingSampleDelivery.open()
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
             guard let window = content.windows.first(where: { $0.owningApplication?.bundleIdentifier == bundleIdentifier }) else {
@@ -43,8 +112,8 @@ final class AudioCapture: NSObject, ObservableObject {
             configuration.channelCount = 1
             configuration.excludesCurrentProcessAudio = true
             let stream = SCStream(filter: filter, configuration: configuration, delegate: self)
-            try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: DispatchQueue(label: "audio.meeting.output"))
-            try stream.addStreamOutput(self, type: .microphone, sampleHandlerQueue: DispatchQueue(label: "audio.meeting.microphone"))
+            try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: sampleHandlerQueue)
+            try stream.addStreamOutput(self, type: .microphone, sampleHandlerQueue: sampleHandlerQueue)
             self.stream = stream
             try await stream.startCapture()
             activeBundleIdentifier = bundleIdentifier
@@ -57,11 +126,22 @@ final class AudioCapture: NSObject, ObservableObject {
 
     func stop() async {
         guard let stream else { state = .stopped; return }
-        self.stream = nil
         activeBundleIdentifier = nil
+        var stopFailure: String?
         do { try await stream.stopCapture() }
-        catch { state = .failed("Audio capture did not stop cleanly: \(error.localizedDescription)"); return }
-        if case .failed = state { return }
+        catch { stopFailure = error.localizedDescription }
+        await withCheckedContinuation { continuation in
+            sampleHandlerQueue.async {
+                self.pendingSampleDelivery.close()
+                continuation.resume()
+            }
+        }
+        await pendingSampleDelivery.waitUntilDrained()
+        if let stopFailure {
+            state = .failed("Audio capture did not stop cleanly: \(stopFailure)")
+            return
+        }
+        self.stream = nil
         state = .stopped
     }
 
@@ -111,11 +191,10 @@ final class AudioCapture: NSObject, ObservableObject {
             return
         }
         let timestamp = Int64(presentationTime.seconds * 1_000)
-        let start = max(timestamp, lastTimestampBySource[source].map { $0 + 1 } ?? 0)
+        let start = timestampNormalizer.normalize(timestamp, source: source)
         let result = buffer.append(AudioBufferFrame(source: source, startTimestampMs: start, samples: samples))
         switch result {
         case .accepted:
-            lastTimestampBySource[source] = start
             onSamples?(source, start, samples)
             _ = buffer.drain(maxFrames: samples.count)
         case .capacityExceeded:
@@ -157,8 +236,13 @@ extension AudioCapture: SCStreamOutput {
         case .screen: return
         @unknown default: return
         }
+        let tracker = pendingSampleDelivery
+        guard tracker.begin() else { return }
         let box = SampleBufferBox(sampleBuffer)
-        Task { @MainActor in receive(box.value, source: source) }
+        Task { @MainActor [weak self] in
+            defer { tracker.finish() }
+            self?.receive(box.value, source: source)
+        }
     }
 }
 

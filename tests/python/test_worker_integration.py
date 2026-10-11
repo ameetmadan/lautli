@@ -34,3 +34,11 @@ def test_fake_worker_rejects_malformed_input_and_exits_cleanly():
     destination = io.StringIO()
     assert serve(source, destination, lambda _: []) == 2
     assert json.loads(destination.getvalue().splitlines()[-1])["state"] == "failed"
+
+
+def test_fake_worker_accepts_stop_without_audio():
+    source = io.StringIO(json.dumps({"type": "stop", "session_id": "s"}) + "\n")
+    destination = io.StringIO()
+    assert serve(source, destination, lambda _: []) == 0
+    messages = [json.loads(line) for line in destination.getvalue().splitlines()]
+    assert messages[-1] == {"type": "status", "state": "ready", "message": "Transcription stopped"}
