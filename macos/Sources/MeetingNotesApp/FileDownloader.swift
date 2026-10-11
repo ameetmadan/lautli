@@ -3,7 +3,7 @@ import Foundation
 final class FileDownloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
     struct HTTPFailure: Error, LocalizedError {
         let status: Int
-        var errorDescription: String? { "Download failed with HTTP status \(status)." }
+        var errorDescription: String? { tr("Download failed with HTTP status \(status).") }
     }
 
     private let destination: URL

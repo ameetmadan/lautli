@@ -1,0 +1,2 @@
+"CFBundleName" = "Meeting Notes";
+"NSMicrophoneUsageDescription" = "Meeting Notes uses your microphone to transcribe your side of a meeting locally on this Mac.";

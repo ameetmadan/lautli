@@ -113,7 +113,7 @@ final class AudioCapture: NSObject, ObservableObject {
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
             guard let window = content.windows.first(where: { $0.owningApplication?.bundleIdentifier == bundleIdentifier }) else {
-                state = .failed("No shareable meeting window. Check Screen Recording permission.")
+                state = .failed(tr("No shareable meeting window. Check Screen Recording permission."))
                 return
             }
             let filter = SCContentFilter(desktopIndependentWindow: window)
@@ -137,7 +137,7 @@ final class AudioCapture: NSObject, ObservableObject {
             activeBundleIdentifier = bundleIdentifier
             state = .capturing
         } catch {
-            state = .failed("Audio capture could not start: \(error.localizedDescription)")
+            state = .failed(tr("Audio capture could not start: \(error.localizedDescription)"))
             await stop(cancelRecovery: false)
         }
     }
@@ -160,7 +160,7 @@ final class AudioCapture: NSObject, ObservableObject {
         }
         await pendingSampleDelivery.waitUntilDrained()
         if let stopFailure {
-            state = .failed("Audio capture did not stop cleanly: \(stopFailure)")
+            state = .failed(tr("Audio capture did not stop cleanly: \(stopFailure)"))
             return
         }
         self.stream = nil
@@ -173,7 +173,7 @@ final class AudioCapture: NSObject, ObservableObject {
         guard let bundleIdentifier = activeBundleIdentifier, state == .capturing,
               let current = stream, ObjectIdentifier(current) == stoppedStream else { return }
         AppLog.write("capture stopped by system, retrying: \((error as NSError).domain) \((error as NSError).code)")
-        notice = "Audio device changed. Restarting capture…"
+        notice = tr("Audio device changed. Restarting capture…")
         stream = nil
         state = .stopped
         recoveryTask = Task { [weak self] in
@@ -182,14 +182,14 @@ final class AudioCapture: NSObject, ObservableObject {
                 guard let self, !Task.isCancelled else { return }
                 await self.launch(bundleIdentifier: bundleIdentifier)
                 if self.state == .capturing {
-                    self.notice = "Capture restarted after an audio device change."
+                    self.notice = tr("Capture restarted after an audio device change.")
                     AppLog.write("capture restarted on attempt \(attempt)")
                     return
                 }
                 self.stream = nil
             }
             self?.notice = nil
-            self?.state = .failed("Audio capture stopped after an audio device change and could not restart.")
+            self?.state = .failed(tr("Audio capture stopped after an audio device change and could not restart."))
         }
     }
 
@@ -203,7 +203,7 @@ final class AudioCapture: NSObject, ObservableObject {
               let inputBuffer = AVAudioPCMBuffer(pcmFormat: inputFormat, bufferListNoCopy: UnsafePointer(list), deallocator: nil)
         else {
             list.deallocate()
-            state = .failed("Meeting audio format could not be decoded.")
+            state = .failed(tr("Meeting audio format could not be decoded."))
             Task { await stop() }
             return
         }
@@ -213,7 +213,7 @@ final class AudioCapture: NSObject, ObservableObject {
               let outputBuffer = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: AVAudioFrameCount(Double(inputBuffer.frameLength) * 16_000 / asbd.mSampleRate + 1))
         else {
             list.deallocate()
-            state = .failed("Audio resampling could not be initialized.")
+            state = .failed(tr("Audio resampling could not be initialized."))
             Task { await stop() }
             return
         }
@@ -227,14 +227,14 @@ final class AudioCapture: NSObject, ObservableObject {
         }
         list.deallocate()
         guard conversionStatus != .error, outputBuffer.frameLength > 0, let channelData = outputBuffer.floatChannelData?[0] else {
-            state = .failed("Audio could not be converted to 16 kHz mono PCM.")
+            state = .failed(tr("Audio could not be converted to 16 kHz mono PCM."))
             Task { await stop() }
             return
         }
         let samples = Array(UnsafeBufferPointer(start: channelData, count: Int(outputBuffer.frameLength)))
         let presentationTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
         guard presentationTime.isNumeric else {
-            state = .failed("Audio timestamps were unavailable; capture stopped to protect ordering.")
+            state = .failed(tr("Audio timestamps were unavailable; capture stopped to protect ordering."))
             Task { await stop() }
             return
         }
@@ -246,10 +246,10 @@ final class AudioCapture: NSObject, ObservableObject {
             onSamples?(source, start, samples)
             _ = buffer.drain(maxFrames: samples.count)
         case .capacityExceeded:
-            state = .failed("Audio buffer reached 30 seconds. Capture stopped so no speech is silently discarded.")
+            state = .failed(tr("Audio buffer reached 30 seconds. Capture stopped so no speech is silently discarded."))
             Task { await stop() }
         case .nonMonotonicTimestamp:
-            state = .failed("Audio timestamps moved backwards. Capture stopped to protect transcript order.")
+            state = .failed(tr("Audio timestamps moved backwards. Capture stopped to protect transcript order."))
             Task { await stop() }
         }
     }

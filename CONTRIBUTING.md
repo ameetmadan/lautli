@@ -33,6 +33,10 @@ Two environment variables redirect the app: `MEETING_NOTES_SUPPORT_DIR` (where s
 
 Ad-hoc signed rebuilds look like a new app to macOS, so Screen Recording and Accessibility grants reset after every build. That is expected until releases are signed with a Developer ID.
 
+## Adding a string or translation
+
+The app is in English and German. English text is the key: write it as a literal in SwiftUI (`Text("Open notes")`) or wrap computed and error strings in `tr("...")` so they follow the in-app language. Then add the German value to `macos/Resources/de.lproj/Localizable.strings`. Interpolations become format specifiers in the key, for example `Text("Step \(n) of \(m)")` has the key `"Step %lld of %lld"` and a `String` interpolation is `%@`. `L10nTests` fails when a literal has no German value or the specifiers differ. To list the exact keys the compiler sees, build with `swift build --package-path macos -Xswiftc -emit-localized-strings -Xswiftc -emit-localized-strings-path -Xswiftc /tmp/strings` and read the `.stringsdata` files.
+
 ## Measuring quality
 
 Put 16 kHz mono recordings and matching reference transcripts side by side (`standup.wav`, `standup.txt`) and run:

@@ -18,7 +18,7 @@ enum Diagnostics {
         Meeting Notes \(version)
         macOS \(ProcessInfo.processInfo.operatingSystemVersionString)
         Physical memory: \(ProcessInfo.processInfo.physicalMemory / 1_073_741_824) GB
-        Permissions: \(Permission.allCases.map { "\($0.title)=\($0.isGranted)" }.joined(separator: ", "))
+        Permissions: \(Permission.allCases.map { "\($0)=\($0.isGranted)" }.joined(separator: ", "))
         Setup complete: \(SetupMarkers(paths: paths).pending.isEmpty)
         """
         try Data(facts.utf8).write(to: staging.appending(path: "system.txt"))

@@ -88,7 +88,7 @@ struct MenuContentView: View {
                 Button("Dismiss") { model.dismissError() }
             }
         case .settingUp:
-            Button(model.onboardingCompleted ? "Show set-up progress…" : "Finish set-up…") { show("onboarding") }
+            Button(model.onboardingCompleted ? "Show set-up progress…" as LocalizedStringKey : "Finish set-up…") { show("onboarding") }
         case .idle where !model.recordingNoticeAcknowledged:
             Button("Finish set-up…") { show("onboarding") }
         default:

@@ -5,11 +5,11 @@ private enum OnboardingStep: Int, CaseIterable {
 
     var title: String {
         switch self {
-        case .welcome: "Welcome"
-        case .setup: "Download the model"
-        case .permissions: "Permissions"
-        case .tryIt: "Try it"
-        case .done: "All set"
+        case .welcome: tr("Welcome")
+        case .setup: tr("Download the model")
+        case .permissions: tr("Permissions")
+        case .tryIt: tr("Try it")
+        case .done: tr("All set")
         }
     }
 }
@@ -31,7 +31,7 @@ struct OnboardingView: View {
                     Button("Back") { step = OnboardingStep(rawValue: step.rawValue - 1) ?? .welcome }
                 }
                 Spacer()
-                Button(step == .done ? "Finish" : "Continue", action: advance)
+                Button(step == .done ? "Finish" as LocalizedStringKey : "Continue", action: advance)
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canAdvance)
             }
@@ -57,6 +57,10 @@ struct OnboardingView: View {
 
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Picker("Language", selection: $model.language) {
+                ForEach(AppLanguage.allCases) { Text($0.displayName).tag($0) }
+            }
+            .fixedSize()
             Text("Meeting Notes listens to your Zoom and Teams calls and writes down what is said in Swiss German.")
             Label("Everything runs on this Mac. Nothing is sent to a server.", systemImage: "lock.shield")
             Label("Audio is never saved. Only the text is stored in your Documents folder.", systemImage: "waveform.slash")
@@ -137,7 +141,7 @@ struct OnboardingView: View {
             }
             if case .error(let message) = model.menuState { Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(.red) }
             ScrollView {
-                Text(model.liveTranscriptText.isEmpty ? "The transcript appears here." : model.liveTranscriptText)
+                Text(model.liveTranscriptText.isEmpty ? tr("The transcript appears here.") : model.liveTranscriptText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .foregroundStyle(model.liveTranscriptText.isEmpty ? .secondary : .primary)
                     .textSelection(.enabled)

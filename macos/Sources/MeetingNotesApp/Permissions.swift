@@ -10,17 +10,17 @@ enum Permission: CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .microphone: "Microphone"
-        case .screenRecording: "Screen Recording"
-        case .accessibility: "Accessibility"
+        case .microphone: tr("Microphone")
+        case .screenRecording: tr("Screen Recording")
+        case .accessibility: tr("Accessibility")
         }
     }
 
     var explanation: String {
         switch self {
-        case .microphone: "Lets Meeting Notes transcribe your side of the call. Audio is processed on this Mac and never saved."
-        case .screenRecording: "Lets Meeting Notes hear Zoom or Teams. It captures only that app's audio. It does not record your screen."
-        case .accessibility: "Lets Meeting Notes see that a meeting is running (Mute and Leave buttons) so it can start by itself. It reads no meeting content."
+        case .microphone: tr("Lets Meeting Notes transcribe your side of the call. Audio is processed on this Mac and never saved.")
+        case .screenRecording: tr("Lets Meeting Notes hear Zoom or Teams. It captures only that app's audio. It does not record your screen.")
+        case .accessibility: tr("Lets Meeting Notes see that a meeting is running (Mute and Leave buttons) so it can start by itself. It reads no meeting content.")
         }
     }
 

@@ -7,27 +7,31 @@ struct MeetingNotesApp: App {
     var body: some Scene {
         MenuBarExtra {
             MenuContentView(model: model)
+                .environment(\.locale, model.language.locale)
         } label: {
             Image(systemName: model.menuState.symbol)
-                .accessibilityLabel("Meeting Notes: \(model.menuState.accessibilityName)")
+                .accessibilityLabel(tr("Meeting Notes: \(model.menuState.accessibilityName)"))
         }
         .menuBarExtraStyle(.window)
 
-        Window("Welcome to Meeting Notes", id: "onboarding") {
+        Window(tr("Welcome to Meeting Notes"), id: "onboarding") {
             OnboardingView(model: model)
+                .environment(\.locale, model.language.locale)
         }
         .windowResizability(.contentSize)
         .defaultLaunchBehavior(model.onboardingCompleted ? .suppressed : .presented)
         .restorationBehavior(.disabled)
 
-        Window("Transcript", id: "transcript") {
+        Window(tr("Transcript"), id: "transcript") {
             TranscriptView(model: model)
+                .environment(\.locale, model.language.locale)
         }
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
-        Window("Meeting Notes Settings", id: "settings") {
+        Window(tr("Meeting Notes Settings"), id: "settings") {
             SettingsView(model: model)
+                .environment(\.locale, model.language.locale)
         }
         .windowResizability(.contentSize)
         .defaultLaunchBehavior(.suppressed)
