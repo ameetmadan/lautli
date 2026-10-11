@@ -11,6 +11,8 @@ trap 'rm -rf "$staging"' EXIT
 
 cp -R "$repo_root/dist/Meeting Notes.app" "$staging/"
 ln -s /Applications "$staging/Applications"
+cp "$repo_root/macos/Resources/AppIcon.icns" "$staging/.VolumeIcon.icns"
+SetFile -a C "$staging"
 rm -f "$dmg"
 hdiutil create -volname "Meeting Notes" -srcfolder "$staging" -ov -format UDZO "$dmg" >/dev/null
 
