@@ -10,3 +10,11 @@ final class SessionTimestampNormalizerTests: XCTestCase {
         XCTAssertEqual(normalizer.normalize(987_654_421, source: .microphone), 100)
     }
 }
+
+final class ResumedSessionTimestampTests: XCTestCase {
+    func testResumedCaptureContinuesAfterTheOffset() {
+        var normalizer = SessionTimestampNormalizer(offsetMs: 60_000)
+        XCTAssertEqual(normalizer.normalize(5_000, source: .microphone), 60_000)
+        XCTAssertEqual(normalizer.normalize(5_250, source: .microphone), 60_250)
+    }
+}
