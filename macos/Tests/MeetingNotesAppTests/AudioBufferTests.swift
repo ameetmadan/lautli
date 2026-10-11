@@ -44,4 +44,20 @@ final class AudioBufferTests: XCTestCase {
         XCTAssertEqual(buffer.bufferedFrameCount, 0)
         XCTAssertEqual(buffer.drain(maxFrames: 8), [])
     }
+
+    func testNewSessionCanRestartTimestampsAfterPreviousFramesWereDrained() {
+        let buffer = BoundedAudioBuffer(maxFrames: 8)
+        XCTAssertEqual(
+            buffer.append(AudioBufferFrame(source: .meetingOutput, startTimestampMs: 12_000, samples: [1, 2])),
+            .accepted
+        )
+        _ = buffer.drain(maxFrames: 8)
+
+        buffer.clear()
+
+        XCTAssertEqual(
+            buffer.append(AudioBufferFrame(source: .meetingOutput, startTimestampMs: 0, samples: [3, 4])),
+            .accepted
+        )
+    }
 }

@@ -93,6 +93,7 @@ final class AudioCapture: NSObject, ObservableObject {
         if activeBundleIdentifier == bundleIdentifier, state == .capturing { return }
         if stream != nil { await stop() }
         guard stream == nil else { return }
+        buffer.clear()
         timestampNormalizer = SessionTimestampNormalizer()
         pendingSampleDelivery.open()
         do {
