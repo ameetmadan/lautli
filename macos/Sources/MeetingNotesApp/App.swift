@@ -1,16 +1,30 @@
 import SwiftUI
+import Combine
 
 @MainActor
 final class MenuBarModel: ObservableObject {
     @Published var automaticStartEnabled = true
     @Published var manuallyListening = false
     let monitor = MeetingMonitor()
+    let audioCapture = AudioCapture()
+    private var meetingSubscription: AnyCancellable?
 
     init() {
         monitor.start()
+        meetingSubscription = monitor.$activeMeetingBundleIdentifier
+            .removeDuplicates()
+            .sink { [weak self] bundleIdentifier in
+                Task { @MainActor in
+                    guard let self else { return }
+                    if let bundleIdentifier { await self.audioCapture.start(bundleIdentifier: bundleIdentifier) }
+                    else { await self.audioCapture.stop() }
+                }
+            }
     }
 
     var statusText: String {
+        if case .failed(let message) = audioCapture.state { return message }
+        if case .capturing = audioCapture.state { return "Listening locally" }
         if manuallyListening { return "Listening locally" }
         return switch monitor.detectionState {
         case .idle: "Waiting for Zoom or Teams"

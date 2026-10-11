@@ -25,7 +25,7 @@
 - Opening Zoom or Teams without a call must not start capture; test app launch and idle meeting window.
 - Quiet lobby, local mute, and temporary silence must not end a real meeting; test each state.
 - Screen/audio or microphone permission denial must leave capture stopped with an actionable status.
-- Transcription slower than real time must cap memory and show lag; feed audio faster than a fake worker can consume it.
+- Transcription slower than real time must cap memory and visibly stop capture on overflow without discarding queued speech; feed audio faster than a fake worker can consume it.
 - Worker crash after committed segments must preserve transcript and export; terminate a fake worker mid-session.
 
 ---
@@ -64,7 +64,7 @@ Write detector state-transition tests using fake process/window/audio observatio
 
 Use ScreenCaptureKit to capture the selected Zoom/Teams app audio and microphone. Convert both to mono 16 kHz PCM in memory and feed a 30-second ring buffer. Include monotonic timestamps and source labels. Preserve the worker's existing committed transcript if capture ends or worker communication fails. The app must never create an audio file or send audio to a remote endpoint.
 
-Write tests proving the ring buffer remains at or below its configured cap, discards only the oldest unprocessed samples according to explicit lag policy, preserves timestamp monotonicity, and stops both sources when paused/stopped.
+Write tests proving the bounded queue remains at or below its configured cap, rejects new samples on overflow without discarding queued speech, preserves timestamp monotonicity, and stops both sources when paused/stopped.
 
 ## Task 4: Add worker protocol and live transcription
 

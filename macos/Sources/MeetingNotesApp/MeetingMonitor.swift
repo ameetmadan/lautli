@@ -7,6 +7,7 @@ import Foundation
 public final class MeetingMonitor: ObservableObject {
     @Published public private(set) var detectionState: MeetingDetectionState = .idle
     @Published public private(set) var accessibilityAvailable = AXIsProcessTrusted()
+    @Published public private(set) var activeMeetingBundleIdentifier: String?
 
     private var detector = MeetingDetector()
     private var pollingTask: Task<Void, Never>?
@@ -64,6 +65,11 @@ public final class MeetingMonitor: ObservableObject {
         )
 
         detectionState = detector.update(observation)
+        if case .capturing = detectionState {
+            activeMeetingBundleIdentifier = candidates.first(where: { $0.0 == observation.app })?.1.bundleIdentifier
+        } else {
+            activeMeetingBundleIdentifier = nil
+        }
     }
 
     private static func hasMeetingControls(processID: pid_t, app: MeetingApp) -> Bool {
