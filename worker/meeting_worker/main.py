@@ -3,10 +3,11 @@ import sys
 from typing import TextIO
 
 import numpy as np
-import torch
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
-from scripts.asr_probe import MODEL_ID, MODEL_REVISION, segment_records
+from scripts.asr_probe import segment_records
+from worker.meeting_worker.device import pick_device
+from worker.meeting_worker.model_spec import MODEL_ID, MODEL_REVISION
 from worker.meeting_worker.protocol import AudioWindow, ProtocolError, Stop, encode_message, parse_message
 from worker.meeting_worker.streaming import StreamingTranscriber, has_audio_energy
 
@@ -14,13 +15,14 @@ from worker.meeting_worker.streaming import StreamingTranscriber, has_audio_ener
 def load_recognizer():
     model_path = os.environ.get("WHISPER_MODEL_PATH", ".models/flix-swissgerman-full")
     print(encode_message({"type": "status", "state": "loading", "message": "Loading local Swiss German model"}), end="", flush=True)
+    device, dtype = pick_device()
     processor = AutoProcessor.from_pretrained(model_path, local_files_only=True)
     model = AutoModelForSpeechSeq2Seq.from_pretrained(
-        model_path, dtype=torch.float16, low_cpu_mem_usage=True, use_safetensors=True, local_files_only=True,
-    ).to("mps")
+        model_path, dtype=dtype, low_cpu_mem_usage=True, use_safetensors=True, local_files_only=True,
+    ).to(device)
     recognizer = pipeline(
         "automatic-speech-recognition", model=model, tokenizer=processor.tokenizer,
-        feature_extractor=processor.feature_extractor, dtype=torch.float16, device="mps",
+        feature_extractor=processor.feature_extractor, dtype=dtype, device=device,
     )
 
     def recognize(samples: list[float]) -> list[dict]:

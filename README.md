@@ -1,48 +1,65 @@
 # Swiss German Meeting Notes
 
-A local-first macOS prototype for automatic Zoom and Teams meeting detection, live Swiss German transcription, and later Standard German meeting notes. Audio and inference stay on the Mac. The current build has meeting detection, ScreenCaptureKit capture, a local Whisper worker, and a live transcript view; notes, exports, pause/resume, and manual app selection are still in progress.
+A macOS menu-bar app that detects Zoom and Microsoft Teams meetings, transcribes them live in Swiss German on your Mac, and writes a Standard German transcript and summary. Audio and transcription never leave the Mac, and audio is never saved.
 
-## Requirements
+## Install
 
-- macOS 15 or newer and Xcode Command Line Tools.
-- Python 3.13 on Apple Silicon with an MPS-capable PyTorch build.
-- About 3 GB of free space for the pinned Apache-2.0 Flix Swiss German checkpoint, plus Python and build dependencies.
+1. Download `MeetingNotes-<version>.dmg` from the [latest release](../../releases/latest) and open it.
+2. Drag **Meeting Notes** to **Applications** and open it.
 
-The checkpoint is `Flix-AI/flix-swissgerman-full` at revision `a9c347a904af5d31b28c537ac732e0618aed6136`. Do not substitute the CC-BY-NC Swiss German Turbo conversion for work meetings.
+**Requirements.** An Apple Silicon Mac (M1 or newer) on macOS 15 or newer, about 7 GB of free disk space and an internet connection for the first launch. Intel Macs are not supported. Standard German meeting notes additionally need macOS 26 or newer with Apple Intelligence turned on. Without it you still get the full transcript.
 
-## Setup and launch
+### If macOS refuses to open the app
 
-From the repository root:
+Early releases are not yet notarized by Apple, so Gatekeeper blocks the first launch. Do one of:
 
-```sh
-python3.13 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python -c 'from huggingface_hub import snapshot_download; snapshot_download("Flix-AI/flix-swissgerman-full", revision="a9c347a904af5d31b28c537ac732e0618aed6136", local_dir=".models/flix-swissgerman-full")'
-scripts/build_mac_app.sh
-open "dist/Meeting Notes.app"
-```
+- Control-click **Meeting Notes** in Applications, choose **Open**, then **Open** again.
+- Or open **System Settings → Privacy & Security**, scroll down and choose **Open Anyway**.
+- Or run `xattr -dr com.apple.quarantine "/Applications/Meeting Notes.app"` in Terminal.
 
-The first model load can take a while. The menu bar shows model loading before it enables automatic meeting capture. macOS asks for microphone and Screen Recording access; allow both. For automatic Zoom/Teams detection, also choose **Allow meeting detection…** in the menu and enable Accessibility access in System Settings. The app waits for meeting controls and app audio before starting.
+A Mac managed by your employer may block unnotarized apps entirely. Ask your IT team, or wait for a notarized release.
 
-The menu-bar indicator is visible while capture runs. The worker transcribes overlapping 10-second audio windows and finalizes text as later windows confirm it. Closing the menu does not stop capture. Stop listening, stop the browser test, or quit to merge that session into one timestamp-ordered Markdown file under `~/Documents/Meeting Notes/`. Temporary text snippets are deleted after the merge. Audio is never saved.
+## First launch
 
-## Test with YouTube audio
+The app walks you through everything:
 
-Open a Swiss German SRF video in Safari, Chrome, Firefox, Edge, Brave, or Arc and start playback. Open the Meeting Notes menu and choose **Test with a Swiss German video…**, then select that browser. This captures that browser's output audio only (not your microphone) and streams it through the same local Whisper worker. Select **Stop YouTube test** when finished. The test transcript is merged into a Markdown file in `~/Documents/Meeting Notes/`, just like a meeting transcript.
+1. **Welcome.** Read the recording notice and confirm you will tell participants that meetings are transcribed.
+2. **Download.** It downloads a private Python runtime, the speech libraries and the Swiss German model (about 4 GB, one time). The download resumes if it is interrupted.
+3. **Permissions.** Each one is explained before macOS asks: Microphone (your voice), Screen Recording (only to hear Zoom or Teams audio, nothing on screen is recorded) and Accessibility (to notice that a meeting started).
+4. **Try it.** Play a Swiss German video in your browser and watch the transcript appear.
 
-## Development checks
+Afterwards Meeting Notes sits in the menu bar. It starts by itself when a Zoom or Teams meeting begins and the menu-bar icon shows when it is listening.
 
-```sh
-swift test --package-path macos
-.venv/bin/python -m pytest -q
-```
+## Using it
 
-The `scripts/asr_probe.py` command benchmarks a local WAV without uploading it:
+- **Menu bar icon.** Shows loading, idle, listening, paused or a problem. Open the menu to pause, resume, or stop and save.
+- **Listen to an app.** If automatic detection misses a call, choose the meeting app manually.
+- **Transcript window.** Live text with copy and export. After a meeting ends, **Open transcript** and **Show in Finder** appear.
+- **Where files go.** `~/Documents/Meeting Notes/` holds `Transkript <date>.md` and, on macOS 26+, `Notizen <date>.md` with a summary, decisions, tasks and open questions. Review notes before sharing them: a local model wrote them.
+- **Settings.** Permissions status, microphone choice, launch at login and **Export diagnostics**.
 
-```sh
-.venv/bin/python scripts/asr_probe.py path/to/16khz-audio.wav
-```
+Use headphones. With speakers the microphone hears the other participants too and lines can appear twice. There is no echo cancellation.
 
-## Current validation limits
+## Troubleshooting
 
-The model was exercised on synthetic Standard German on an M1 Pro/16 GB host, not on Swiss German meeting audio or the target M5/24 GB Mac. No real Zoom or Teams call has been used to verify the system-audio format, permissions, meeting detector labels, transcript quality, or sustained real-time performance. Review the transcript before relying on it; this prototype does not yet produce or save Standard German notes.
+| Problem | What to do |
+|---|---|
+| Nothing is transcribed | Open Settings and check all three permissions are allowed. macOS occasionally asks for Screen Recording again. |
+| Menu shows a worker problem | Choose **Restart worker** in the menu. |
+| Download fails or stalls | Check your connection and choose **Try again**. On a corporate network, make sure `github.com`, `pypi.org`, `files.pythonhosted.org` and `huggingface.co` are reachable. |
+| Transcript stops after plugging in headphones | The app restarts capture automatically. If it cannot, choose **Dismiss** and listen again. |
+| Need help | **Settings → Export diagnostics** saves a zip of logs to your Desktop. It contains no transcripts or audio. |
+
+To remove everything, delete the app, `~/Library/Application Support/Meeting Notes` and optionally `~/Documents/Meeting Notes`.
+
+## Privacy
+
+See [PRIVACY.md](PRIVACY.md). In short: everything runs on your Mac, there is no telemetry, and audio is never saved. The only network use is the one-time download of the runtime and model.
+
+## Validation status
+
+The model has been exercised on synthetic Standard German on an M1 Pro with 16 GB, not yet on real Swiss German meetings, real Zoom or Teams calls, or the lowest supported hardware. Expect rough edges and review transcripts before relying on them. Tracking issue: #7.
+
+## Developing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Third-party licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

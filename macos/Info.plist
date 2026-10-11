@@ -5,15 +5,17 @@
 	<key>CFBundleExecutable</key>
 	<string>MeetingNotesApp</string>
 	<key>CFBundleIdentifier</key>
-	<string>local.swissgerman.meetingnotes</string>
+	<string>io.github.ameetmadan.meetingnotes</string>
 	<key>CFBundleName</key>
 	<string>Meeting Notes</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.0.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
-	<key>MeetingNotesProjectRoot</key>
-	<string>.</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>15.0</string>
 	<key>LSUIElement</key>

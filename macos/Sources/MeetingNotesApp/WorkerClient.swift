@@ -38,10 +38,11 @@ final class WorkerClient: ObservableObject {
     @Published private(set) var state: State = .stopped
     var onSegment: (([String: Any]) -> Void)?
     var onStopComplete: (() -> Void)?
-    private let process = Process()
-    private let input = Pipe()
-    private let output = Pipe()
-    nonisolated private let outputBuffer = WorkerOutputBuffer()
+    private var process = Process()
+    private var input = Pipe()
+    private var output = Pipe()
+    private var paths = AppPaths.standard
+    private var outputBuffer = WorkerOutputBuffer()
     nonisolated private let stdoutReadQueue = DispatchQueue(label: "worker.stdout.reader")
     private var outputRemainder = Data()
     private let sessionID = UUID().uuidString
@@ -49,16 +50,32 @@ final class WorkerClient: ObservableObject {
     private var writeBusy = false
     private let writer = DispatchQueue(label: "worker.stdin.writer")
 
-    func start(projectDirectory: URL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)) {
+    func start(paths: AppPaths = .standard) {
         guard !process.isRunning else { return }
+        self.paths = paths
+        let process = Process()
+        let input = Pipe()
+        let output = Pipe()
+        self.process = process
+        self.input = input
+        self.output = output
+        outputRemainder = Data()
+        writeBusy = false
         state = .starting
-        process.executableURL = projectDirectory.appending(path: ".venv/bin/python")
+        process.executableURL = paths.python
         process.arguments = ["-m", "worker.meeting_worker.main"]
-        process.currentDirectoryURL = projectDirectory
+        process.currentDirectoryURL = paths.workerSource
+        process.environment = ProcessInfo.processInfo.environment.merging([
+            "WHISPER_MODEL_PATH": paths.modelDirectory.path,
+            "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1",
+            // The worker lives inside the signed app bundle; writing bytecode there would break its signature.
+            "PYTHONDONTWRITEBYTECODE": "1",
+        ]) { _, new in new }
         process.standardInput = input
         process.standardOutput = output
-        process.standardError = FileHandle.nullDevice
-        let outputBuffer = self.outputBuffer
+        process.standardError = Self.openWorkerLog(paths) ?? FileHandle.nullDevice
+        let outputBuffer = WorkerOutputBuffer()
+        self.outputBuffer = outputBuffer
         let stdoutReadQueue = self.stdoutReadQueue
         output.fileHandleForReading.readabilityHandler = { [weak self] handle in
             stdoutReadQueue.async {
@@ -67,23 +84,45 @@ final class WorkerClient: ObservableObject {
                 Task { @MainActor in self?.drainPendingOutput() }
             }
         }
-        process.terminationHandler = { [weak self] process in
+        process.terminationHandler = { [weak self] finished in
             guard let self else { return }
-            self.output.fileHandleForReading.readabilityHandler = nil
+            output.fileHandleForReading.readabilityHandler = nil
             self.stdoutReadQueue.sync {
-                let trailingOutput = self.output.fileHandleForReading.readDataToEndOfFile()
-                _ = self.outputBuffer.append(trailingOutput)
+                let trailingOutput = output.fileHandleForReading.readDataToEndOfFile()
+                _ = outputBuffer.append(trailingOutput)
             }
             Task { @MainActor in
+                guard finished === self.process else { return }
                 self.drainPendingOutput()
-                if process.terminationStatus != 0 { self.state = .failed("Local transcription worker exited unexpectedly.") }
-                else { self.state = .stopped }
+                if finished.terminationStatus != 0 {
+                    self.state = .failed("Local transcription worker exited unexpectedly.")
+                    AppLog.write("worker exited with status \(finished.terminationStatus)", paths: self.paths)
+                } else { self.state = .stopped }
                 self.onStopComplete?()
                 self.onStopComplete = nil
             }
         }
         do { try process.run() }
         catch { state = .failed("Could not start local worker: \(error.localizedDescription)") }
+    }
+
+    /// Replaces a failed or stopped worker with a fresh process.
+    func restart() {
+        terminate()
+        process = Process()
+        audioBySource.removeAll()
+        start(paths: paths)
+    }
+
+    private static func openWorkerLog(_ paths: AppPaths) -> FileHandle? {
+        let fileManager = FileManager.default
+        try? fileManager.createDirectory(at: paths.logs, withIntermediateDirectories: true)
+        let log = paths.logs.appending(path: "worker.log")
+        let previous = paths.logs.appending(path: "worker.old.log")
+        try? fileManager.removeItem(at: previous)
+        try? fileManager.moveItem(at: log, to: previous)
+        fileManager.createFile(atPath: log.path, contents: nil)
+        return try? FileHandle(forWritingTo: log)
     }
 
     func appendAudio(source: AudioSource, samples: [Float], startMs: Int64) {

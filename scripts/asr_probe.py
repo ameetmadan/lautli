@@ -6,11 +6,11 @@ from pathlib import Path
 
 import numpy as np
 import soundfile as sf
-import torch
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
-MODEL_ID = "Flix-AI/flix-swissgerman-full"
-MODEL_REVISION = "a9c347a904af5d31b28c537ac732e0618aed6136"
+from worker.meeting_worker.device import pick_device
+from worker.meeting_worker.model_spec import MODEL_ID, MODEL_REVISION
+
 
 
 def load_audio(path: str | Path) -> tuple[np.ndarray, int]:
@@ -38,21 +38,22 @@ def segment_records(result: dict) -> list[dict[str, int | str]]:
 
 def transcribe(path: str | Path, model_path: str | Path) -> dict:
     samples, sample_rate = load_audio(path)
+    device, dtype = pick_device()
     processor = AutoProcessor.from_pretrained(model_path, local_files_only=True)
     model = AutoModelForSpeechSeq2Seq.from_pretrained(
         model_path,
-        dtype=torch.float16,
+        dtype=dtype,
         low_cpu_mem_usage=True,
         use_safetensors=True,
         local_files_only=True,
-    ).to("mps")
+    ).to(device)
     asr = pipeline(
         "automatic-speech-recognition",
         model=model,
         tokenizer=processor.tokenizer,
         feature_extractor=processor.feature_extractor,
-        dtype=torch.float16,
-        device="mps",
+        dtype=dtype,
+        device=device,
     )
 
     audio_seconds = len(samples) / sample_rate

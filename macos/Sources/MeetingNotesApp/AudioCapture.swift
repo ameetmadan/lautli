@@ -61,11 +61,15 @@ private final class PendingSampleDelivery: @unchecked Sendable {
 
 struct SessionTimestampNormalizer {
     private(set) var originMs: Int64?
+    /// Shifts a resumed capture past what was already transcribed so one transcript keeps a single timeline.
+    private let offsetMs: Int64
     private var lastTimestampBySource: [AudioSource: Int64] = [:]
+
+    init(offsetMs: Int64 = 0) { self.offsetMs = offsetMs }
 
     mutating func normalize(_ timestampMs: Int64, source: AudioSource) -> Int64 {
         if originMs == nil { originMs = timestampMs }
-        let elapsed = max(0, timestampMs - (originMs ?? timestampMs))
+        let elapsed = max(0, timestampMs - (originMs ?? timestampMs)) + offsetMs
         let normalized = max(elapsed, lastTimestampBySource[source].map { $0 + 1 } ?? elapsed)
         lastTimestampBySource[source] = normalized
         return normalized
@@ -81,6 +85,8 @@ final class AudioCapture: NSObject, ObservableObject {
     }
 
     @Published private(set) var state: State = .stopped
+    @Published private(set) var microphoneName: String?
+    @Published private(set) var notice: String?
     let buffer = BoundedAudioBuffer(maxFrames: 30 * 16_000)
     var onSamples: ((AudioSource, Int64, [Float]) -> Void)?
     private(set) var activeBundleIdentifier: String?
@@ -88,13 +94,21 @@ final class AudioCapture: NSObject, ObservableObject {
     private let sampleHandlerQueue = DispatchQueue(label: "audio.meeting.output")
     private var stream: SCStream?
     private var timestampNormalizer = SessionTimestampNormalizer()
+    private var captureMicrophone = true
+    private var recoveryTask: Task<Void, Never>?
 
-    func start(bundleIdentifier: String, captureMicrophone: Bool = true) async {
+    func start(bundleIdentifier: String, captureMicrophone: Bool = true, startOffsetMs: Int64 = 0) async {
         if activeBundleIdentifier == bundleIdentifier, state == .capturing { return }
         if stream != nil { await stop() }
         guard stream == nil else { return }
         buffer.clear()
-        timestampNormalizer = SessionTimestampNormalizer()
+        timestampNormalizer = SessionTimestampNormalizer(offsetMs: startOffsetMs)
+        self.captureMicrophone = captureMicrophone
+        notice = nil
+        await launch(bundleIdentifier: bundleIdentifier)
+    }
+
+    private func launch(bundleIdentifier: String) async {
         pendingSampleDelivery.open()
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
@@ -109,6 +123,9 @@ final class AudioCapture: NSObject, ObservableObject {
             configuration.minimumFrameInterval = CMTime(value: 1, timescale: 1)
             configuration.capturesAudio = true
             configuration.captureMicrophone = captureMicrophone
+            let microphone = captureMicrophone ? MicrophoneChoice.selected() : nil
+            configuration.microphoneCaptureDeviceID = microphone?.uniqueID
+            microphoneName = microphone?.localizedName
             configuration.sampleRate = 16_000
             configuration.channelCount = 1
             configuration.excludesCurrentProcessAudio = true
@@ -121,11 +138,15 @@ final class AudioCapture: NSObject, ObservableObject {
             state = .capturing
         } catch {
             state = .failed("Audio capture could not start: \(error.localizedDescription)")
-            await stop()
+            await stop(cancelRecovery: false)
         }
     }
 
-    func stop() async {
+    func stop(cancelRecovery: Bool = true) async {
+        if cancelRecovery {
+            recoveryTask?.cancel()
+            recoveryTask = nil
+        }
         guard let stream else { state = .stopped; return }
         activeBundleIdentifier = nil
         var stopFailure: String?
@@ -143,7 +164,33 @@ final class AudioCapture: NSObject, ObservableObject {
             return
         }
         self.stream = nil
+        microphoneName = nil
         state = .stopped
+    }
+
+    /// Headphones connecting or the default input changing makes ScreenCaptureKit stop the stream. Retry instead of silently ending the transcript.
+    fileprivate func recoverFromStop(of stoppedStream: ObjectIdentifier, error: any Error) {
+        guard let bundleIdentifier = activeBundleIdentifier, state == .capturing,
+              let current = stream, ObjectIdentifier(current) == stoppedStream else { return }
+        AppLog.write("capture stopped by system, retrying: \((error as NSError).domain) \((error as NSError).code)")
+        notice = "Audio device changed. Restarting capture…"
+        stream = nil
+        state = .stopped
+        recoveryTask = Task { [weak self] in
+            for attempt in 1...3 {
+                try? await Task.sleep(for: .seconds(attempt))
+                guard let self, !Task.isCancelled else { return }
+                await self.launch(bundleIdentifier: bundleIdentifier)
+                if self.state == .capturing {
+                    self.notice = "Capture restarted after an audio device change."
+                    AppLog.write("capture restarted on attempt \(attempt)")
+                    return
+                }
+                self.stream = nil
+            }
+            self?.notice = nil
+            self?.state = .failed("Audio capture stopped after an audio device change and could not restart.")
+        }
     }
 
     private func receive(_ sampleBuffer: CMSampleBuffer, source: AudioSource) {
@@ -249,6 +296,20 @@ extension AudioCapture: SCStreamOutput {
 
 extension AudioCapture: SCStreamDelegate {
     nonisolated func stream(_ stream: SCStream, didStopWithError error: any Error) {
-        Task { @MainActor in state = .failed("ScreenCaptureKit stopped: \(error.localizedDescription)") }
+        let stopped = ObjectIdentifier(stream)
+        Task { @MainActor in recoverFromStop(of: stopped, error: error) }
+    }
+}
+
+enum MicrophoneChoice {
+    static let preferenceKey = "preferredMicrophoneID"
+
+    static func devices() -> [AVCaptureDevice] {
+        AVCaptureDevice.DiscoverySession(deviceTypes: [.microphone, .external], mediaType: .audio, position: .unspecified).devices
+    }
+
+    /// The user's pick if that device is still connected, otherwise the system default.
+    static func selected(preferredID: String? = UserDefaults.standard.string(forKey: preferenceKey)) -> AVCaptureDevice? {
+        preferredID.flatMap { id in devices().first { $0.uniqueID == id } } ?? AVCaptureDevice.default(for: .audio)
     }
 }
