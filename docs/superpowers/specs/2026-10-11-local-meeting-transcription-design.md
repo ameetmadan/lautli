@@ -27,6 +27,7 @@ Success for the prototype means:
 - Swiss German speech transcription into Standard German, with timestamps.
 - On-device note generation after capture ends, with each note item referencing transcript segment IDs/timestamps.
 - Local transcript and note export (Markdown plus JSON); no audio retention.
+- A manual test mode that captures a selected browser's audio to evaluate Swiss German transcription on public videos; this does not expand automatic meeting detection to browsers.
 - A short end-to-end trial and evaluation procedure on the user's laptop.
 
 ### Out of scope

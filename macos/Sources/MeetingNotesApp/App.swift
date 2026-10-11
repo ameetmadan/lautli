@@ -1,5 +1,12 @@
 import SwiftUI
 import Combine
+import AppKit
+
+fileprivate struct BrowserChoice: Identifiable {
+    let bundleIdentifier: String
+    let name: String
+    var id: String { bundleIdentifier }
+}
 
 @MainActor
 final class MenuBarModel: ObservableObject {
@@ -7,6 +14,7 @@ final class MenuBarModel: ObservableObject {
     @Published var manuallyListening = false
     @Published var transcriptLines: [String] = []
     @Published fileprivate var captureSuppressed = false
+    @Published private(set) var browserTestBundleIdentifier: String?
     let monitor = MeetingMonitor()
     let audioCapture = AudioCapture()
     let worker = WorkerClient()
@@ -39,11 +47,13 @@ final class MenuBarModel: ObservableObject {
     }
 
     func updateCapture(for bundleIdentifier: String?) {
-        if bundleIdentifier == nil { captureSuppressed = false }
-        let canStart = !captureSuppressed && (automaticStartEnabled || manuallyListening)
-        if let bundleIdentifier, canStart, worker.state == .ready {
-            Task { await audioCapture.start(bundleIdentifier: bundleIdentifier) }
-        } else if bundleIdentifier == nil || !canStart || isWorkerFailed {
+        let selectedBundleIdentifier = browserTestBundleIdentifier ?? bundleIdentifier
+        if selectedBundleIdentifier == nil { captureSuppressed = false }
+        let isBrowserTest = browserTestBundleIdentifier != nil
+        let canStart = !captureSuppressed && (isBrowserTest || automaticStartEnabled || manuallyListening)
+        if let selectedBundleIdentifier, canStart, worker.state == .ready {
+            Task { await audioCapture.start(bundleIdentifier: selectedBundleIdentifier, captureMicrophone: !isBrowserTest) }
+        } else if selectedBundleIdentifier == nil || !canStart || isWorkerFailed {
             if audioCapture.state == .capturing {
                 Task {
                     await audioCapture.stop()
@@ -51,6 +61,34 @@ final class MenuBarModel: ObservableObject {
                 }
             }
         }
+    }
+
+    fileprivate var runningBrowsers: [BrowserChoice] {
+        let supported: [String: String] = [
+            "com.apple.Safari": "Safari",
+            "com.google.Chrome": "Google Chrome",
+            "org.mozilla.firefox": "Firefox",
+            "com.microsoft.edgemac": "Microsoft Edge",
+            "com.brave.Browser": "Brave",
+            "company.thebrowser.Browser": "Arc",
+        ]
+        return NSWorkspace.shared.runningApplications.compactMap { application in
+            guard let bundleIdentifier = application.bundleIdentifier,
+                  let name = supported[bundleIdentifier] else { return nil }
+            return BrowserChoice(bundleIdentifier: bundleIdentifier, name: name)
+        }
+    }
+
+    func startBrowserTest(bundleIdentifier: String) {
+        browserTestBundleIdentifier = bundleIdentifier
+        captureSuppressed = false
+        transcriptLines.removeAll()
+        updateCapture(for: monitor.activeMeetingBundleIdentifier)
+    }
+
+    func stopBrowserTest() {
+        browserTestBundleIdentifier = nil
+        updateCapture(for: monitor.activeMeetingBundleIdentifier)
     }
 
     private var isWorkerFailed: Bool {
@@ -65,6 +103,7 @@ final class MenuBarModel: ObservableObject {
     }
 
     var statusText: String {
+        if browserTestBundleIdentifier != nil, audioCapture.state == .capturing { return "Testing browser audio locally" }
         if captureSuppressed { return "Listening paused" }
         if case .failed(let message) = audioCapture.state { return message }
         if case .capturing = audioCapture.state { return "Listening locally" }
@@ -116,18 +155,31 @@ struct MeetingNotesApp: App {
                 if !model.monitor.accessibilityAvailable {
                     Button("Allow meeting detection…") { model.monitor.requestAccessibilityAccess() }
                 }
-                Divider()
-                Button(model.audioCapture.state == .capturing ? "Stop listening" : "Resume listening") {
-                    if model.audioCapture.state == .capturing {
-                        model.captureSuppressed = true
-                        Task {
-                            await model.audioCapture.stop()
-                            model.worker.stop()
-                        }
+                Menu("Test with a Swiss German video…") {
+                    if model.runningBrowsers.isEmpty {
+                        Text("Open YouTube in Safari, Chrome, Firefox, Edge, Brave, or Arc first.")
                     } else {
-                        model.manuallyListening = true
-                        model.captureSuppressed = false
-                        model.updateCapture(for: model.monitor.activeMeetingBundleIdentifier)
+                        ForEach(model.runningBrowsers) { browser in
+                            Button(browser.name) { model.startBrowserTest(bundleIdentifier: browser.bundleIdentifier) }
+                        }
+                    }
+                }
+                Divider()
+                if model.browserTestBundleIdentifier != nil {
+                    Button("Stop YouTube test") { model.stopBrowserTest() }
+                } else {
+                    Button(model.audioCapture.state == .capturing ? "Stop listening" : "Resume listening") {
+                        if model.audioCapture.state == .capturing {
+                            model.captureSuppressed = true
+                            Task {
+                                await model.audioCapture.stop()
+                                model.worker.stop()
+                            }
+                        } else {
+                            model.manuallyListening = true
+                            model.captureSuppressed = false
+                            model.updateCapture(for: model.monitor.activeMeetingBundleIdentifier)
+                        }
                     }
                 }
                 Button("Quit") {

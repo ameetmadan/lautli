@@ -26,6 +26,10 @@ The first model load can take a while. The menu bar shows model loading before i
 
 The menu-bar indicator is visible while capture runs. Finalized transcript lines appear in the menu. Closing the menu does not stop capture; use the menu's stop/quit action to end the process.
 
+## Test with YouTube audio
+
+Open a Swiss German SRF video in Safari, Chrome, Firefox, Edge, Brave, or Arc and start playback. Open the Meeting Notes menu and choose **Test with a Swiss German video…**, then select that browser. This captures that browser's output audio only (not your microphone) and streams it through the same local Whisper worker. Select **Stop YouTube test** when finished. The browser test transcript is shown in the menu and is not saved as a recording.
+
 ## Development checks
 
 ```sh

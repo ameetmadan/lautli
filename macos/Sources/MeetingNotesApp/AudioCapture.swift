@@ -18,10 +18,13 @@ final class AudioCapture: NSObject, ObservableObject {
     @Published private(set) var state: State = .stopped
     let buffer = BoundedAudioBuffer(maxFrames: 30 * 16_000)
     var onSamples: ((AudioSource, Int64, [Float]) -> Void)?
+    private(set) var activeBundleIdentifier: String?
     private var stream: SCStream?
     private var lastTimestampBySource: [AudioSource: Int64] = [:]
 
-    func start(bundleIdentifier: String) async {
+    func start(bundleIdentifier: String, captureMicrophone: Bool = true) async {
+        if activeBundleIdentifier == bundleIdentifier, state == .capturing { return }
+        if stream != nil { await stop() }
         guard stream == nil else { return }
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
@@ -35,7 +38,7 @@ final class AudioCapture: NSObject, ObservableObject {
             configuration.height = 2
             configuration.minimumFrameInterval = CMTime(value: 1, timescale: 1)
             configuration.capturesAudio = true
-            configuration.captureMicrophone = true
+            configuration.captureMicrophone = captureMicrophone
             configuration.sampleRate = 16_000
             configuration.channelCount = 1
             configuration.excludesCurrentProcessAudio = true
@@ -44,6 +47,7 @@ final class AudioCapture: NSObject, ObservableObject {
             try stream.addStreamOutput(self, type: .microphone, sampleHandlerQueue: DispatchQueue(label: "audio.meeting.microphone"))
             self.stream = stream
             try await stream.startCapture()
+            activeBundleIdentifier = bundleIdentifier
             state = .capturing
         } catch {
             state = .failed("Audio capture could not start: \(error.localizedDescription)")
@@ -54,6 +58,7 @@ final class AudioCapture: NSObject, ObservableObject {
     func stop() async {
         guard let stream else { state = .stopped; return }
         self.stream = nil
+        activeBundleIdentifier = nil
         do { try await stream.stopCapture() }
         catch { state = .failed("Audio capture did not stop cleanly: \(error.localizedDescription)"); return }
         if case .failed = state { return }
