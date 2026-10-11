@@ -19,6 +19,7 @@ class AudioWindow:
     start_ms: int
     sample_rate_hz: int
     samples: bytes
+    source: str
 
     @property
     def sample_count(self) -> int:
@@ -62,7 +63,10 @@ def parse_message(line: str) -> AudioWindow | Stop:
         raise ProtocolError("samples_base64 is invalid") from error
     if not samples or len(samples) % 4 or len(samples) > SAMPLE_RATE_HZ * MAX_AUDIO_SECONDS * 4:
         raise ProtocolError("Audio window must contain 1 to 30 seconds of float32 samples")
-    return AudioWindow(session_id, start_ms, sample_rate, samples)
+    source = value.get("source", "meetingOutput")
+    if source not in {"meetingOutput", "microphone"}:
+        raise ProtocolError("source must be meetingOutput or microphone")
+    return AudioWindow(session_id, start_ms, sample_rate, samples, source)
 
 
 def encode_message(value: dict[str, Any]) -> str:

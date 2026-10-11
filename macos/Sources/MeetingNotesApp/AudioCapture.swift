@@ -17,6 +17,7 @@ final class AudioCapture: NSObject, ObservableObject {
 
     @Published private(set) var state: State = .stopped
     let buffer = BoundedAudioBuffer(maxFrames: 30 * 16_000)
+    var onSamples: ((AudioSource, Int64, [Float]) -> Void)?
     private var stream: SCStream?
     private var lastTimestampBySource: [AudioSource: Int64] = [:]
 
@@ -64,33 +65,54 @@ final class AudioCapture: NSObject, ObservableObject {
               let description = CMSampleBufferGetFormatDescription(sampleBuffer),
               let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(description)?.pointee,
               let list = copyAudioBufferList(sampleBuffer) else { return }
-        let buffers = UnsafeMutableAudioBufferListPointer(list)
-        let channelCount = max(1, Int(asbd.mChannelsPerFrame))
-        var samples: [Float] = []
-        for audioBuffer in buffers {
-            guard let data = audioBuffer.mData else { continue }
-            let count = Int(audioBuffer.mDataByteSize) / MemoryLayout<Float>.size
-            let channelSamples = data.assumingMemoryBound(to: Float.self)
-            if channelCount == 1 { samples.append(contentsOf: UnsafeBufferPointer(start: channelSamples, count: count)) }
-            else {
-                for index in stride(from: 0, to: count, by: channelCount) {
-                    let end = min(index + channelCount, count)
-                    let mono = (index..<end).reduce(Float.zero) { $0 + channelSamples[$1] } / Float(end - index)
-                    samples.append(mono)
-                }
-            }
-        }
-        list.deallocate()
-        guard asbd.mSampleRate == 16_000, !samples.isEmpty else {
-            state = .failed("Audio format was not 16 kHz PCM; capture stopped to avoid corrupt transcription.")
+        var inputDescription = asbd
+        guard let inputFormat = AVAudioFormat(streamDescription: &inputDescription),
+              let inputBuffer = AVAudioPCMBuffer(pcmFormat: inputFormat, bufferListNoCopy: UnsafePointer(list), deallocator: nil)
+        else {
+            list.deallocate()
+            state = .failed("Meeting audio format could not be decoded.")
             Task { await stop() }
             return
         }
-        let timestamp = Int64(CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds * 1_000)
+        inputBuffer.frameLength = AVAudioFrameCount(CMSampleBufferGetNumSamples(sampleBuffer))
+        guard let outputFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16_000, channels: 1, interleaved: false),
+              let converter = AVAudioConverter(from: inputFormat, to: outputFormat),
+              let outputBuffer = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: AVAudioFrameCount(Double(inputBuffer.frameLength) * 16_000 / asbd.mSampleRate + 1))
+        else {
+            list.deallocate()
+            state = .failed("Audio resampling could not be initialized.")
+            Task { await stop() }
+            return
+        }
+        var suppliedInput = false
+        var conversionError: NSError?
+        let conversionStatus = converter.convert(to: outputBuffer, error: &conversionError) { _, status in
+            guard !suppliedInput else { status.pointee = .noDataNow; return nil }
+            suppliedInput = true
+            status.pointee = .haveData
+            return inputBuffer
+        }
+        list.deallocate()
+        guard conversionStatus != .error, outputBuffer.frameLength > 0, let channelData = outputBuffer.floatChannelData?[0] else {
+            state = .failed("Audio could not be converted to 16 kHz mono PCM.")
+            Task { await stop() }
+            return
+        }
+        let samples = Array(UnsafeBufferPointer(start: channelData, count: Int(outputBuffer.frameLength)))
+        let presentationTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+        guard presentationTime.isNumeric else {
+            state = .failed("Audio timestamps were unavailable; capture stopped to protect ordering.")
+            Task { await stop() }
+            return
+        }
+        let timestamp = Int64(presentationTime.seconds * 1_000)
         let start = max(timestamp, lastTimestampBySource[source].map { $0 + 1 } ?? 0)
         let result = buffer.append(AudioBufferFrame(source: source, startTimestampMs: start, samples: samples))
         switch result {
-        case .accepted: lastTimestampBySource[source] = start
+        case .accepted:
+            lastTimestampBySource[source] = start
+            onSamples?(source, start, samples)
+            _ = buffer.drain(maxFrames: samples.count)
         case .capacityExceeded:
             state = .failed("Audio buffer reached 30 seconds. Capture stopped so no speech is silently discarded.")
             Task { await stop() }
@@ -109,7 +131,8 @@ final class AudioCapture: NSObject, ObservableObject {
             blockBufferMemoryAllocator: kCFAllocatorDefault, flags: 0, blockBufferOut: &blockBuffer
         )
         guard status == noErr, needed > 0 else { return nil }
-        let storage = UnsafeMutablePointer<AudioBufferList>.allocate(capacity: 1)
+        let allocationCount = (needed + MemoryLayout<AudioBufferList>.stride - 1) / MemoryLayout<AudioBufferList>.stride
+        let storage = UnsafeMutablePointer<AudioBufferList>.allocate(capacity: allocationCount)
         let result = CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(
             sampleBuffer, bufferListSizeNeededOut: nil, bufferListOut: storage,
             bufferListSize: needed, blockBufferAllocator: kCFAllocatorDefault,

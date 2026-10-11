@@ -1,6 +1,6 @@
 import Foundation
 
-public enum AudioSource: Hashable {
+public enum AudioSource: String, Hashable {
     case microphone
     case meetingOutput
 }

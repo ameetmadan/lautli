@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import TextIO
 
 import numpy as np
 import torch
@@ -7,7 +8,7 @@ from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
 from scripts.asr_probe import MODEL_ID, MODEL_REVISION, segment_records
 from worker.meeting_worker.protocol import AudioWindow, ProtocolError, Stop, encode_message, parse_message
-from worker.meeting_worker.streaming import StreamingTranscriber
+from worker.meeting_worker.streaming import StreamingTranscriber, has_audio_energy
 
 
 def load_recognizer():
@@ -23,6 +24,8 @@ def load_recognizer():
     )
 
     def recognize(samples: list[float]) -> list[dict]:
+        if not has_audio_energy(samples):
+            return []
         result = recognizer(
             {"raw": np.asarray(samples, dtype=np.float32), "sampling_rate": 16_000},
             chunk_length_s=30, stride_length_s=(5, 5), return_timestamps=True,
@@ -33,37 +36,50 @@ def load_recognizer():
     return recognize
 
 
+def serve(input_stream: TextIO, output_stream: TextIO, recognize) -> int:
+    def emit(value):
+        output_stream.write(encode_message(value))
+        output_stream.flush()
+
+    emit({"type": "status", "state": "ready", "message": f"{MODEL_ID} ({MODEL_REVISION[:12]}) ready locally"})
+    session_id = None
+    transcriber = None
+    for line in input_stream:
+        try:
+            message = parse_message(line)
+        except ProtocolError as error:
+            emit({"type": "status", "state": "failed", "message": str(error)})
+            return 2
+        if isinstance(message, Stop):
+            if session_id != message.session_id:
+                emit({"type": "status", "state": "failed", "message": "Session ID mismatch"})
+                return 2
+            if transcriber:
+                for event in transcriber.flush():
+                    emit(event)
+            session_id = None
+            transcriber = None
+            emit({"type": "status", "state": "ready", "message": "Transcription stopped"})
+            continue
+        if session_id is None:
+            session_id = message.session_id
+            transcriber = StreamingTranscriber(session_id, recognize)
+        if message.session_id != session_id or not isinstance(message, AudioWindow):
+            emit({"type": "status", "state": "failed", "message": "Session ID mismatch"})
+            return 2
+        samples = np.frombuffer(message.samples, dtype="<f4").astype(np.float32, copy=False).tolist()
+        for event in transcriber.process(message.start_ms, samples, message.source):
+            emit(event)
+    return 0
+
+
 def run() -> int:
     try:
         recognize = load_recognizer()
     except Exception as error:
         print(encode_message({"type": "status", "state": "failed", "message": f"Local model failed to load: {type(error).__name__}"}), end="", flush=True)
         return 1
-    print(encode_message({"type": "status", "state": "ready", "message": f"{MODEL_ID} ({MODEL_REVISION[:12]}) ready locally"}), end="", flush=True)
-    session_id = None
-    transcriber = None
-    for line in sys.stdin:
-        try:
-            message = parse_message(line)
-        except ProtocolError as error:
-            print(encode_message({"type": "status", "state": "failed", "message": str(error)}), end="", flush=True)
-            return 2
-        if isinstance(message, Stop):
-            if session_id != message.session_id:
-                print(encode_message({"type": "status", "state": "failed", "message": "Session ID mismatch"}), end="", flush=True)
-                return 2
-            print(encode_message({"type": "status", "state": "ready", "message": "Transcription stopped"}), end="", flush=True)
-            return 0
-        if session_id is None:
-            session_id = message.session_id
-            transcriber = StreamingTranscriber(session_id, recognize)
-        if message.session_id != session_id or not isinstance(message, AudioWindow):
-            print(encode_message({"type": "status", "state": "failed", "message": "Session ID mismatch"}), end="", flush=True)
-            return 2
-        samples = np.frombuffer(message.samples, dtype="<f4").astype(np.float32, copy=False).tolist()
-        for event in transcriber.process(message.start_ms, samples):
-            print(encode_message(event), end="", flush=True)
-    return 0
+    return serve(sys.stdin, sys.stdout, recognize)
 
 
 if __name__ == "__main__":
