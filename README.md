@@ -1,11 +1,11 @@
-# Swiss German Meeting Notes
+# lautli
 
 A macOS menu-bar app that detects Zoom and Microsoft Teams meetings, transcribes them live in Swiss German on your Mac, and writes a Standard German transcript and summary. Audio and transcription never leave the Mac, and audio is never saved.
 
 ## Install
 
-1. Download `MeetingNotes-<version>.dmg` from the [latest release](../../releases/latest) and open it.
-2. Drag **Meeting Notes** to **Applications** and open it.
+1. Download `lautli-<version>.dmg` from the [latest release](../../releases/latest) and open it.
+2. Drag **lautli** to **Applications** and open it.
 
 **Requirements.** An Apple Silicon Mac (M1 or newer) on macOS 15 or newer, about 7 GB of free disk space and an internet connection for the first launch. Intel Macs are not supported. Standard German meeting notes additionally need macOS 26 or newer with Apple Intelligence turned on. Without it you still get the full transcript.
 
@@ -13,9 +13,9 @@ A macOS menu-bar app that detects Zoom and Microsoft Teams meetings, transcribes
 
 Early releases are not yet notarized by Apple, so Gatekeeper blocks the first launch. Do one of:
 
-- Control-click **Meeting Notes** in Applications, choose **Open**, then **Open** again.
+- Control-click **lautli** in Applications, choose **Open**, then **Open** again.
 - Or open **System Settings → Privacy & Security**, scroll down and choose **Open Anyway**.
-- Or run `xattr -dr com.apple.quarantine "/Applications/Meeting Notes.app"` in Terminal.
+- Or run `xattr -dr com.apple.quarantine "/Applications/lautli.app"` in Terminal.
 
 A Mac managed by your employer may block unnotarized apps entirely. Ask your IT team, or wait for a notarized release.
 
@@ -28,14 +28,14 @@ The app walks you through everything:
 3. **Permissions.** Each one is explained before macOS asks: Microphone (your voice), Screen Recording (only to hear Zoom or Teams audio, nothing on screen is recorded) and Accessibility (to notice that a meeting started).
 4. **Try it.** Play a Swiss German video in your browser and watch the transcript appear.
 
-Afterwards Meeting Notes sits in the menu bar. It starts by itself when a Zoom or Teams meeting begins and the menu-bar icon shows when it is listening.
+Afterwards lautli sits in the menu bar. It starts by itself when a Zoom or Teams meeting begins and the menu-bar icon shows when it is listening.
 
 ## Using it
 
 - **Menu bar icon.** Shows loading, idle, listening, paused or a problem. Open the menu to pause, resume, or stop and save.
 - **Listen to an app.** If automatic detection misses a call, choose the meeting app manually.
 - **Transcript window.** Live text with copy and export. After a meeting ends, **Open transcript** and **Show in Finder** appear.
-- **Where files go.** `~/Documents/Meeting Notes/` holds `Transkript <date>.md` and, on macOS 26+, `Notizen <date>.md` with a summary, decisions, tasks and open questions. Review notes before sharing them: a local model wrote them.
+- **Where files go.** `~/Documents/lautli/` holds `Transkript <date>.md` and, on macOS 26+, `Notizen <date>.md` with a summary, decisions, tasks and open questions. Review notes before sharing them: a local model wrote them.
 - **Settings.** Language (English or German, switches immediately), permissions status, microphone choice, launch at login and **Export diagnostics**. The app language does not change transcripts or notes.
 
 Use headphones. With speakers the microphone hears the other participants too and lines can appear twice. There is no echo cancellation.
@@ -50,7 +50,7 @@ Use headphones. With speakers the microphone hears the other participants too an
 | Transcript stops after plugging in headphones | The app restarts capture automatically. If it cannot, choose **Dismiss** and listen again. |
 | Need help | **Settings → Export diagnostics** saves a zip of logs to your Desktop. It contains no transcripts or audio. |
 
-To remove everything, delete the app, `~/Library/Application Support/Meeting Notes` and optionally `~/Documents/Meeting Notes`.
+To remove everything, delete the app, `~/Library/Application Support/lautli` and optionally `~/Documents/lautli`.
 
 ## Privacy
 

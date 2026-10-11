@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from worker.meeting_worker.download_model import downloaded_bytes, verify
+from worker.lautli_worker.download_model import downloaded_bytes, verify
 
 
 def _entry(name, data, lfs=True):

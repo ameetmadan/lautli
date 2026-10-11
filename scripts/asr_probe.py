@@ -8,8 +8,8 @@ import numpy as np
 import soundfile as sf
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
-from worker.meeting_worker.device import pick_device
-from worker.meeting_worker.model_spec import MODEL_ID, MODEL_REVISION
+from worker.lautli_worker.device import pick_device
+from worker.lautli_worker.model_spec import MODEL_ID, MODEL_REVISION
 
 
 

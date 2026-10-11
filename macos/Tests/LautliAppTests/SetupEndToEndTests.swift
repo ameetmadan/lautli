@@ -1,15 +1,15 @@
 import Foundation
 import XCTest
-@testable import MeetingNotesApp
+@testable import LautliApp
 
-/// Downloads about 4 GB. Run with MEETING_NOTES_E2E=1 (optionally MEETING_NOTES_E2E_DIR to reuse a directory between runs).
+/// Downloads about 4 GB. Run with LAUTLI_E2E=1 (optionally LAUTLI_E2E_DIR to reuse a directory between runs).
 @MainActor
 final class SetupEndToEndTests: XCTestCase {
     func testFreshMacReachesWorkerReady() async throws {
         let environment = ProcessInfo.processInfo.environment
-        guard environment["MEETING_NOTES_E2E"] != nil else { throw XCTSkip("set MEETING_NOTES_E2E=1 to run the network test") }
+        guard environment["LAUTLI_E2E"] != nil else { throw XCTSkip("set LAUTLI_E2E=1 to run the network test") }
         let repoRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let support = environment["MEETING_NOTES_E2E_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
+        let support = environment["LAUTLI_E2E_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
             ?? FileManager.default.temporaryDirectory.appending(path: "mn-e2e-\(UUID().uuidString)", directoryHint: .isDirectory)
         let paths = AppPaths(support: support, workerSource: repoRoot)
 

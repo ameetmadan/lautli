@@ -5,16 +5,16 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>MeetingNotesApp</string>
+	<string>LautliApp</string>
 	<key>CFBundleIdentifier</key>
-	<string>io.github.ameetmadan.meetingnotes</string>
+	<string>io.github.ameetmadan.lautli</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>en</string>
 		<string>de</string>
 	</array>
 	<key>CFBundleName</key>
-	<string>Meeting Notes</string>
+	<string>lautli</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -28,6 +28,6 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Meeting Notes uses your microphone to transcribe your side of a meeting locally on this Mac.</string>
+	<string>lautli uses your microphone to transcribe your side of a meeting locally on this Mac.</string>
 </dict>
 </plist>

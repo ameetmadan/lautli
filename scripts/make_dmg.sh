@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# Packages dist/Meeting Notes.app into dist/MeetingNotes-<version>.dmg.
+# Packages dist/lautli.app into dist/lautli-<version>.dmg.
 # With NOTARY_KEY_PATH, NOTARY_KEY_ID and NOTARY_ISSUER set, the DMG is notarized and stapled.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 version="${VERSION:-0.0.0-dev}"
-dmg="$repo_root/dist/MeetingNotes-${version#v}.dmg"
+dmg="$repo_root/dist/lautli-${version#v}.dmg"
 staging="$(mktemp -d)"
 trap 'rm -rf "$staging"' EXIT
 
-cp -R "$repo_root/dist/Meeting Notes.app" "$staging/"
+cp -R "$repo_root/dist/lautli.app" "$staging/"
 ln -s /Applications "$staging/Applications"
 rm -f "$dmg"
-hdiutil create -volname "Meeting Notes" -srcfolder "$staging" -ov -format UDZO "$dmg" >/dev/null
+hdiutil create -volname "lautli" -srcfolder "$staging" -ov -format UDZO "$dmg" >/dev/null
 
 if [ "${SIGN_IDENTITY:--}" != "-" ]; then
   codesign --force --timestamp --sign "$SIGN_IDENTITY" "$dmg"

@@ -1,5 +1,5 @@
 import XCTest
-@testable import MeetingNotesApp
+@testable import LautliApp
 
 final class SessionTimestampNormalizerTests: XCTestCase {
     func testCaptureTimestampsAreRelativeToFirstSampleAndMonotonicPerSource() {

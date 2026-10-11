@@ -2,11 +2,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "MeetingNotesApp",
+    name: "LautliApp",
     platforms: [.macOS(.v15)],
-    products: [.executable(name: "MeetingNotesApp", targets: ["MeetingNotesApp"])],
+    products: [.executable(name: "LautliApp", targets: ["LautliApp"])],
     targets: [
-        .executableTarget(name: "MeetingNotesApp"),
-        .testTarget(name: "MeetingNotesAppTests", dependencies: ["MeetingNotesApp"]),
+        .executableTarget(name: "LautliApp"),
+        .testTarget(name: "LautliAppTests", dependencies: ["LautliApp"]),
     ]
 )

@@ -49,14 +49,14 @@ jobs:
         run: |
           scripts/build_mac_app.sh
           scripts/make_dmg.sh
-          (cd dist && shasum -a 256 *.dmg > "MeetingNotes-${VERSION#v}.dmg.sha256")
+          (cd dist && shasum -a 256 *.dmg > "lautli-${VERSION#v}.dmg.sha256")
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           SIGNED: ${{ steps.signing.outputs.signed }}
         run: |
-          notes="Download the DMG, drag Meeting Notes to Applications and follow the README."
+          notes="Download the DMG, drag lautli to Applications and follow the README."
           flags=()
           if [ "$SIGNED" != "true" ]; then
             flags+=(--prerelease)
@@ -65,5 +65,5 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/*.dmg dist/*.sha256 --clobber
           else
-            gh release create "$TAG" dist/*.dmg dist/*.sha256 --title "Meeting Notes $TAG" --notes "$notes" "${flags[@]}"
+            gh release create "$TAG" dist/*.dmg dist/*.sha256 --title "lautli $TAG" --notes "$notes" "${flags[@]}"
           fi

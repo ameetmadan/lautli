@@ -11,7 +11,7 @@ struct SettingsView: View {
                 ForEach(Permission.allCases) { permission in
                     PermissionRow(permission: permission, granted: model.permissions.granted.contains(permission))
                 }
-                Text("macOS occasionally asks again for Screen Recording. If a permission shows as missing here, allow it in System Settings and reopen Meeting Notes.")
+                Text("macOS occasionally asks again for Screen Recording. If a permission shows as missing here, allow it in System Settings and reopen lautli.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Microphone") {
@@ -26,7 +26,7 @@ struct SettingsView: View {
                 Picker("Language", selection: $model.language) {
                     ForEach(AppLanguage.allCases) { Text($0.displayName).tag($0) }
                 }
-                Toggle("Open Meeting Notes when I log in", isOn: Binding(get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) }))
+                Toggle("Open lautli when I log in", isOn: Binding(get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) }))
                 Toggle("I will tell participants that meetings are transcribed", isOn: $model.recordingNoticeAcknowledged)
                 Button("Export diagnostics…") {
                     do {

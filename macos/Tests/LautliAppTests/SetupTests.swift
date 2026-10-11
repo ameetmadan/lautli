@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import MeetingNotesApp
+@testable import LautliApp
 
 final class SetupTests: XCTestCase {
     private func makePaths() throws -> AppPaths {

@@ -326,7 +326,7 @@ final class MenuBarModel: ObservableObject {
             }
             sessionStore = nil
         } catch {
-            let recoveryPath = sessionStore?.workingDirectoryPath ?? "Documents/Meeting Notes"
+            let recoveryPath = sessionStore?.workingDirectoryPath ?? "Documents/lautli"
             storageError = tr("Could not merge transcript: \(error.localizedDescription). Text snippets remain at \(recoveryPath)")
             sessionStore = nil
         }
@@ -374,7 +374,7 @@ final class MenuBarModel: ObservableObject {
     func openNotes() { if case .ready(let url) = notesStatus { NSWorkspace.shared.open(url) } }
 
     static var transcriptFolder: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appending(path: "Meeting Notes", directoryHint: .isDirectory)
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appending(path: "lautli", directoryHint: .isDirectory)
     }
 
     var liveTranscriptText: String { transcriptLines.joined(separator: "\n") }

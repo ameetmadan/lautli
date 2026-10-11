@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import MeetingNotesApp
+@testable import LautliApp
 
 final class TranscriptSessionStoreTests: XCTestCase {
     func testFinalizedSegmentsAreMergedInTimestampOrderAndWorkingSnippetsAreRemoved() throws {
@@ -17,6 +17,6 @@ final class TranscriptSessionStoreTests: XCTestCase {
         XCTAssertTrue(text.contains("[00:00:12] Zweite Aussage"))
         XCTAssertFalse(text.contains("Duplikat"))
         XCTAssertLessThan(try XCTUnwrap(text.range(of: "Erste Aussage")).lowerBound, try XCTUnwrap(text.range(of: "Zweite Aussage")).lowerBound)
-        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: documents.appending(path: "Meeting Notes").path).count, 1)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: documents.appending(path: "lautli").path).count, 1)
     }
 }

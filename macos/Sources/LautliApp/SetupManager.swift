@@ -189,7 +189,7 @@ final class SetupManager: ObservableObject {
         do {
             try await ProcessRunner.run(
                 paths.python,
-                arguments: ["-m", "worker.meeting_worker.download_model", paths.modelDirectory.path],
+                arguments: ["-m", "worker.lautli_worker.download_model", paths.modelDirectory.path],
                 currentDirectory: paths.workerSource,
                 environment: ProcessRunner.systemProxyEnvironment()
             ) { [weak self] line in
@@ -232,7 +232,7 @@ enum SetupError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .diskSpace: tr("Meeting Notes needs about 7 GB of free disk space for the speech model and libraries.")
+        case .diskSpace: tr("lautli needs about 7 GB of free disk space for the speech model and libraries.")
         case .checksum(let name): tr("The downloaded \(name) failed its integrity check.")
         case .model(let message): tr("The model download failed: \(message).")
         }

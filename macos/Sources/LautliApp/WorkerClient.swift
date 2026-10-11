@@ -63,7 +63,7 @@ final class WorkerClient: ObservableObject {
         writeBusy = false
         state = .starting
         process.executableURL = paths.python
-        process.arguments = ["-m", "worker.meeting_worker.main"]
+        process.arguments = ["-m", "worker.lautli_worker.main"]
         process.currentDirectoryURL = paths.workerSource
         process.environment = ProcessInfo.processInfo.environment.merging([
             "WHISPER_MODEL_PATH": paths.modelDirectory.path,

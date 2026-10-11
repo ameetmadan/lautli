@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct MeetingNotesApp: App {
+struct LautliApp: App {
     @StateObject private var model = MenuBarModel()
 
     var body: some Scene {
@@ -10,11 +10,11 @@ struct MeetingNotesApp: App {
                 .environment(\.locale, model.language.locale)
         } label: {
             Image(systemName: model.menuState.symbol)
-                .accessibilityLabel(tr("Meeting Notes: \(model.menuState.accessibilityName)"))
+                .accessibilityLabel(tr("lautli: \(model.menuState.accessibilityName)"))
         }
         .menuBarExtraStyle(.window)
 
-        Window(tr("Welcome to Meeting Notes"), id: "onboarding") {
+        Window(tr("Welcome to lautli"), id: "onboarding") {
             OnboardingView(model: model)
                 .environment(\.locale, model.language.locale)
         }
@@ -29,7 +29,7 @@ struct MeetingNotesApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
-        Window(tr("Meeting Notes Settings"), id: "settings") {
+        Window(tr("lautli Settings"), id: "settings") {
             SettingsView(model: model)
                 .environment(\.locale, model.language.locale)
         }
