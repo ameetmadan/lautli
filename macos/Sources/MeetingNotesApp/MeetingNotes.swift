@@ -3,7 +3,7 @@ import Foundation
 import FoundationModels
 #endif
 
-enum NotesError: LocalizedError {
+enum NotesError: LocalizedError, Equatable {
     case unavailable, empty
 
     var errorDescription: String? {

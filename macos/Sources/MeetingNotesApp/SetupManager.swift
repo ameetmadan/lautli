@@ -210,7 +210,9 @@ final class SetupManager: ObservableObject {
     nonisolated private static func percent(_ fraction: Double, _ text: String) -> String { "\(text) \(Int(fraction * 100))%" }
 
     nonisolated private static func append(_ line: String, to url: URL) {
-        guard let handle = try? FileHandle(forWritingTo: url) ?? { FileManager.default.createFile(atPath: url.path, contents: nil); return try FileHandle(forWritingTo: url) }() else { return }
+        let fileManager = FileManager.default
+        if !fileManager.fileExists(atPath: url.path) { fileManager.createFile(atPath: url.path, contents: nil) }
+        guard let handle = try? FileHandle(forWritingTo: url) else { return }
         defer { try? handle.close() }
         _ = try? handle.seekToEnd()
         try? handle.write(contentsOf: Data((line + "\n").utf8))
