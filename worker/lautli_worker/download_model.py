@@ -7,7 +7,7 @@ from pathlib import Path
 
 from huggingface_hub import HfApi, snapshot_download
 
-from worker.meeting_worker.model_spec import MODEL_ID, MODEL_REVISION
+from worker.lautli_worker.model_spec import MODEL_ID, MODEL_REVISION
 
 
 def emit(value: dict) -> None:

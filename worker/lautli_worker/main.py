@@ -6,10 +6,10 @@ import numpy as np
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
 from scripts.asr_probe import segment_records
-from worker.meeting_worker.device import pick_device
-from worker.meeting_worker.model_spec import MODEL_ID, MODEL_REVISION
-from worker.meeting_worker.protocol import AudioWindow, ProtocolError, Stop, encode_message, parse_message
-from worker.meeting_worker.streaming import StreamingTranscriber, has_audio_energy
+from worker.lautli_worker.device import pick_device
+from worker.lautli_worker.model_spec import MODEL_ID, MODEL_REVISION
+from worker.lautli_worker.protocol import AudioWindow, ProtocolError, Stop, encode_message, parse_message
+from worker.lautli_worker.streaming import StreamingTranscriber, has_audio_energy
 
 
 def load_recognizer():

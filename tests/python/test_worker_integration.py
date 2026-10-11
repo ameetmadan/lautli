@@ -2,7 +2,7 @@ import base64
 import io
 import json
 
-from worker.meeting_worker.main import serve
+from worker.lautli_worker.main import serve
 
 
 def _audio(start_ms, session_id="s"):

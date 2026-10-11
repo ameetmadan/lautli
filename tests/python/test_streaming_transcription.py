@@ -1,4 +1,4 @@
-from worker.meeting_worker.streaming import StreamingTranscriber, has_audio_energy
+from worker.lautli_worker.streaming import StreamingTranscriber, has_audio_energy
 
 
 def test_silence_is_filtered_before_asr_to_avoid_whisper_hallucinations():

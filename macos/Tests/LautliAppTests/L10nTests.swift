@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import MeetingNotesApp
+@testable import LautliApp
 
 final class L10nTests: XCTestCase {
     private let macos = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
@@ -40,7 +40,7 @@ final class L10nTests: XCTestCase {
     func testEveryLiteralInTheSourcesHasAGermanValue() throws {
         let placeholder = "\u{1}"
         let germanKeys = Set(try germanStrings().keys.map { $0.replacing(/%(?:\d+\$)?(?:lld|ld|d|@|\.?\d*f)/, with: placeholder) })
-        let sources = macos.appending(path: "Sources/MeetingNotesApp", directoryHint: .isDirectory)
+        let sources = macos.appending(path: "Sources/LautliApp", directoryHint: .isDirectory)
         let files = try FileManager.default.contentsOfDirectory(at: sources, includingPropertiesForKeys: nil).filter { $0.pathExtension == "swift" }
         let call = /(?:\b(?:tr|Text|Button|Label|Toggle|Section|Picker|Menu|accessibilityLabel)\(|String\(localized:\s*)"((?:[^"\\]|\\.)*)"/
         var missing: [String] = []

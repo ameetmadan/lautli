@@ -1,6 +1,6 @@
 # Third-party notices
 
-Meeting Notes downloads and runs the following components on first launch. Each is subject to its own license. Verify the current terms before public distribution.
+lautli downloads and runs the following components on first launch. Each is subject to its own license. Verify the current terms before public distribution.
 
 | Component | License |
 |---|---|
@@ -13,4 +13,4 @@ Meeting Notes downloads and runs the following components on first launch. Each 
 | NumPy | BSD-3-Clause |
 | SoundFile | BSD-3-Clause |
 
-The app itself uses only Apple system frameworks. The pinned versions are in `requirements.txt` and `macos/Sources/MeetingNotesApp/SetupManager.swift`.
+The app itself uses only Apple system frameworks. The pinned versions are in `requirements.txt` and `macos/Sources/LautliApp/SetupManager.swift`.

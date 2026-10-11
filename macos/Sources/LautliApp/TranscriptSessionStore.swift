@@ -16,7 +16,7 @@ final class TranscriptSessionStore {
     var workingDirectoryPath: String { snippetsDirectory.path }
 
     init(documentsRoot: URL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0], startedAt: Date = Date()) throws {
-        self.root = documentsRoot.appending(path: "Meeting Notes", directoryHint: .isDirectory)
+        self.root = documentsRoot.appending(path: "lautli", directoryHint: .isDirectory)
         self.startedAt = startedAt
         self.snippetsDirectory = root.appending(path: ".working-\(UUID().uuidString)", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: snippetsDirectory, withIntermediateDirectories: true)

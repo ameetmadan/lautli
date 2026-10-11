@@ -12,10 +12,10 @@ struct AppPaths: Sendable {
     /// Environment overrides let tests and development builds point at scratch directories or a repo checkout.
     static let standard: AppPaths = {
         let environment = ProcessInfo.processInfo.environment
-        let support = environment["MEETING_NOTES_SUPPORT_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
+        let support = environment["LAUTLI_SUPPORT_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
             ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appending(path: "Meeting Notes", directoryHint: .isDirectory)
-        let workerSource = environment["MEETING_NOTES_WORKER_SRC"].map { URL(fileURLWithPath: $0, isDirectory: true) }
+                .appending(path: "lautli", directoryHint: .isDirectory)
+        let workerSource = environment["LAUTLI_WORKER_SRC"].map { URL(fileURLWithPath: $0, isDirectory: true) }
             ?? Bundle.main.resourceURL!.appending(path: "worker-src", directoryHint: .isDirectory)
         return AppPaths(support: support, workerSource: workerSource)
     }()

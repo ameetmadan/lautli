@@ -61,13 +61,13 @@ struct OnboardingView: View {
                 ForEach(AppLanguage.allCases) { Text($0.displayName).tag($0) }
             }
             .fixedSize()
-            Text("Meeting Notes listens to your Zoom and Teams calls and writes down what is said in Swiss German.")
+            Text("lautli listens to your Zoom and Teams calls and writes down what is said in Swiss German.")
             Label("Everything runs on this Mac. Nothing is sent to a server.", systemImage: "lock.shield")
             Label("Audio is never saved. Only the text is stored in your Documents folder.", systemImage: "waveform.slash")
             GroupBox {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Recording notice").font(.headline)
-                    Text("Transcribing a conversation can require the consent of everyone in it, depending on Swiss and EU law and your employer's rules. Tell participants before you transcribe. A menu-bar icon stays visible while Meeting Notes is listening.")
+                    Text("Transcribing a conversation can require the consent of everyone in it, depending on Swiss and EU law and your employer's rules. Tell participants before you transcribe. A menu-bar icon stays visible while lautli is listening.")
                         .font(.callout).fixedSize(horizontal: false, vertical: true)
                     Toggle("I will tell participants that the meeting is transcribed", isOn: $model.recordingNoticeAcknowledged)
                 }.padding(4)
@@ -77,7 +77,7 @@ struct OnboardingView: View {
 
     private var setup: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Meeting Notes downloads its speech model once, about 4 GB in total, and stores it in Application Support. You need an internet connection for this step only.")
+            Text("lautli downloads its speech model once, about 4 GB in total, and stores it in Application Support. You need an internet connection for this step only.")
             ForEach(SetupStep.allCases, id: \.self) { item in
                 HStack {
                     if model.setup.completed.contains(item) {
@@ -117,7 +117,7 @@ struct OnboardingView: View {
             ForEach(Permission.allCases) { permission in
                 PermissionRow(permission: permission, granted: model.permissions.granted.contains(permission))
             }
-            Text("macOS may ask you to reopen Meeting Notes after you allow Screen Recording.").font(.caption).foregroundStyle(.secondary)
+            Text("macOS may ask you to reopen lautli after you allow Screen Recording.").font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -155,10 +155,10 @@ struct OnboardingView: View {
 
     private var done: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Meeting Notes now waits in the menu bar. It starts by itself when a Zoom or Teams meeting begins.")
+            Text("lautli now waits in the menu bar. It starts by itself when a Zoom or Teams meeting begins.")
             Label("Transcripts are saved in \(MenuBarModel.transcriptFolder.path)", systemImage: "folder")
             Button("Show in Finder") { NSWorkspace.shared.open(MenuBarModel.transcriptFolder) }
-            Toggle("Open Meeting Notes when I log in", isOn: Binding(get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) }))
+            Toggle("Open lautli when I log in", isOn: Binding(get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) }))
         }
     }
 

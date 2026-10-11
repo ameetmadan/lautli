@@ -6,7 +6,7 @@ enum Diagnostics {
     @MainActor
     static func export(paths: AppPaths = .standard) throws -> URL {
         let fileManager = FileManager.default
-        let staging = fileManager.temporaryDirectory.appending(path: "Meeting Notes Diagnostics", directoryHint: .isDirectory)
+        let staging = fileManager.temporaryDirectory.appending(path: "lautli Diagnostics", directoryHint: .isDirectory)
         try? fileManager.removeItem(at: staging)
         try fileManager.createDirectory(at: staging, withIntermediateDirectories: true)
         for name in ["app.log", "app.old.log", "worker.log", "worker.old.log", "setup.log"] {
@@ -15,7 +15,7 @@ enum Diagnostics {
         }
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
         let facts = """
-        Meeting Notes \(version)
+        lautli \(version)
         macOS \(ProcessInfo.processInfo.operatingSystemVersionString)
         Physical memory: \(ProcessInfo.processInfo.physicalMemory / 1_073_741_824) GB
         Permissions: \(Permission.allCases.map { "\($0)=\($0.isGranted)" }.joined(separator: ", "))
@@ -26,7 +26,7 @@ enum Diagnostics {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH-mm-ss"
         let desktop = fileManager.urls(for: .desktopDirectory, in: .userDomainMask)[0]
-        let archive = desktop.appending(path: "Meeting Notes Diagnostics \(formatter.string(from: Date())).zip")
+        let archive = desktop.appending(path: "lautli Diagnostics \(formatter.string(from: Date())).zip")
         let ditto = Process()
         ditto.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
         ditto.arguments = ["-c", "-k", "--keepParent", staging.path, archive.path]
