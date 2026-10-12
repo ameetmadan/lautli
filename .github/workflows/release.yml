@@ -96,12 +96,9 @@ jobs:
           SIGNED: ${{ steps.signing.outputs.signed }}
         run: |
           notes="Download the DMG, drag lautli to Applications and follow the README."
-          # Only a signed build is marked Latest; GitHub never marks pre-releases as latest.
-          flags=(--generate-notes --target "$GITHUB_SHA")
-          if [ "$SIGNED" = "true" ]; then
-            flags+=(--latest)
-          else
-            flags+=(--prerelease)
+          # Unsigned builds are still Latest: the README download link points at /releases/latest.
+          flags=(--generate-notes --target "$GITHUB_SHA" --latest)
+          if [ "$SIGNED" != "true" ]; then
             notes="$notes This build is not notarized: on first launch, Control-click the app and choose Open (see README)."
           fi
           if gh release view "$TAG" >/dev/null 2>&1; then
