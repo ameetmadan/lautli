@@ -2,13 +2,52 @@ name: Release
 
 on:
   push:
+    branches: [main]
     tags: ["v*"]
 
 permissions:
   contents: write
 
+# One release at a time so two quick merges never compute the same version.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.next.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: next
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ "$REF_TYPE" = tag ]; then
+            echo "tag=$REF_NAME" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          last=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' || echo v0.0.0)
+          subjects=$(git log "$last..HEAD" --no-merges --format=%s)
+          if [ -z "$subjects" ]; then
+            echo "Nothing new since $last; skipping release."
+            exit 0
+          fi
+          IFS=. read -r major minor patch <<< "${last#v}"
+          # Conventional commits: feat or a breaking change bumps minor (pre-1.0), anything else bumps patch.
+          if grep -qE '^feat(\(.+\))?!?:|^[a-z]+(\(.+\))?!:' <<< "$subjects"; then
+            minor=$((minor + 1)); patch=0
+          else
+            patch=$((patch + 1))
+          fi
+          echo "tag=v$major.$minor.$patch" >> "$GITHUB_OUTPUT"
   release:
+    needs: version
+    if: needs.version.outputs.tag != ''
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +79,7 @@ jobs:
           echo "identity=$identity" >> "$GITHUB_OUTPUT"
       - name: Build app and DMG
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ needs.version.outputs.tag }}
           BUILD_NUMBER: ${{ github.run_number }}
           SIGN_IDENTITY: ${{ steps.signing.outputs.identity || '-' }}
           NOTARY_KEY_PATH: ${{ steps.signing.outputs.signed == 'true' && format('{0}/notary.p8', runner.temp) || '' }}
@@ -53,12 +92,15 @@ jobs:
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ needs.version.outputs.tag }}
           SIGNED: ${{ steps.signing.outputs.signed }}
         run: |
           notes="Download the DMG, drag lautli to Applications and follow the README."
-          flags=()
-          if [ "$SIGNED" != "true" ]; then
+          # Only a signed build is marked Latest; GitHub never marks pre-releases as latest.
+          flags=(--generate-notes --target "$GITHUB_SHA")
+          if [ "$SIGNED" = "true" ]; then
+            flags+=(--latest)
+          else
             flags+=(--prerelease)
             notes="$notes This build is not notarized: on first launch, Control-click the app and choose Open (see README)."
           fi
