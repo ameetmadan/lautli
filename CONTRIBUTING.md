@@ -50,7 +50,7 @@ It prints per-file word error rate, real-time factor and peak memory. Keep recor
 
 ## Releasing
 
-Every merge to `main` releases automatically. `.github/workflows/release.yml` picks the next version from the conventional commits since the last tag (`feat:` or a `!` breaking change bumps the minor version, anything else bumps the patch), builds the app, packages the DMG and publishes a GitHub Release marked Latest, which creates the tag. To choose a version yourself, push a `vX.Y.Z` tag instead. Without signing secrets it publishes an ad-hoc signed pre-release. To sign and notarize, add these repository secrets: `DEVELOPER_ID_CERT_BASE64`, `DEVELOPER_ID_CERT_PASSWORD`, `NOTARY_KEY_BASE64` (App Store Connect API key, `.p8`), `NOTARY_KEY_ID` and `NOTARY_ISSUER`.
+Every merge to `main` releases automatically. `.github/workflows/release.yml` picks the next version from the conventional commits since the last tag (`feat:` or a `!` breaking change bumps the minor version, anything else bumps the patch), builds the app, packages the DMG and publishes a GitHub Release marked Latest, which creates the tag. To choose a version yourself, push a `vX.Y.Z` tag instead. Without signing secrets the release is ad-hoc signed and not notarized, but still marked Latest. To sign and notarize, add these repository secrets: `DEVELOPER_ID_CERT_BASE64`, `DEVELOPER_ID_CERT_PASSWORD`, `NOTARY_KEY_BASE64` (App Store Connect API key, `.p8`), `NOTARY_KEY_ID` and `NOTARY_ISSUER`.
 
 ## Model and licensing
 
