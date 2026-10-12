@@ -4,6 +4,7 @@
 
 - `macos/` is the Swift menu-bar app (capture, meeting detection, setup, UI).
 - `worker/lautli_worker/` is the Python transcription worker. The app talks to it with JSON lines over stdin/stdout.
+- `worker/lautli_worker/mcp_server.py` is the read-only MCP server AI apps connect to. It is standard library only on purpose: a new entry in `requirements.txt` changes the setup digest and sends every existing install back through dependency setup.
 - `scripts/` has the app and DMG build scripts, the ASR probe and the WER tool.
 
 The packaged app does not bundle Python or the model. On first launch `SetupManager` downloads a pinned [python-build-standalone](https://github.com/astral-sh/python-build-standalone) runtime, installs `requirements.txt` into it and downloads the pinned model into `~/Library/Application Support/lautli/`. Each step records a marker, so setup is safe to repeat.

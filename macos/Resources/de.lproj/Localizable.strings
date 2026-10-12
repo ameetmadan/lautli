@@ -151,3 +151,10 @@
 "Worker sent an unknown status." = "Der Transkriptionsprozess hat einen unbekannten Status gesendet.";
 "Worker sent malformed output; transcription stopped." = "Der Transkriptionsprozess hat fehlerhafte Daten gesendet. Die Transkription wurde beendet.";
 "You can close this window. The download continues and resumes if interrupted." = "Sie können dieses Fenster schliessen. Der Download läuft weiter und wird nach einer Unterbrechung fortgesetzt.";
+"Connect to AI app" = "Mit KI-App verbinden";
+"Let Claude, Codex or Cursor read your meeting transcripts on this Mac, for example to turn action points into tasks. Copy the setup for your app and paste it there. The text of a meeting is then visible to that AI provider, so only connect apps you trust with it. Keep the approval prompt on for actions that change things, because a meeting transcript contains other people's words." = "Claude, Codex oder Cursor können Ihre Meeting-Transkripte auf diesem Mac lesen, zum Beispiel um Pendenzen aus dem Meeting in Aufgaben zu überführen. Kopieren Sie die Einrichtung für Ihre App und fügen Sie sie dort ein. Der Text eines Meetings ist dann für diesen KI-Anbieter sichtbar. Verbinden Sie deshalb nur Apps, denen Sie ihn anvertrauen. Lassen Sie die Rückfrage bei Aktionen eingeschaltet, die etwas verändern, denn ein Transkript enthält die Worte anderer Personen.";
+"Copy command for Claude Code" = "Befehl für Claude Code kopieren";
+"Copy config for Codex" = "Konfiguration für Codex kopieren";
+"Copy config for Claude Desktop or Cursor" = "Konfiguration für Claude Desktop oder Cursor kopieren";
+"Finish setting up lautli first." = "Schliessen Sie zuerst die Einrichtung von lautli ab.";
+"Copied. If you move lautli to another folder, copy it again." = "Kopiert. Wenn Sie lautli in einen anderen Ordner verschieben, kopieren Sie es erneut.";

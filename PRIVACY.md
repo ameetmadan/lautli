@@ -5,6 +5,7 @@ lautli processes meeting audio only on your Mac.
 - **No telemetry.** The app sends no analytics, usage data or crash reports.
 - **Audio is never saved.** Audio is converted to text in memory and discarded.
 - **Transcripts stay local.** Text is written to `~/Documents/lautli/`. Standard German notes are created by Apple's on-device model on macOS 26 or newer. Nothing is uploaded.
+- **AI apps you connect.** If you connect Claude, Codex, Cursor or another AI app through **Settings → Connect to AI app**, that app can read your transcripts and notes on request, and its provider then sees the text under its own privacy terms. lautli sends nothing itself, and the connection is read-only.
 - **Network use.** The first launch downloads the Python runtime (GitHub), Python libraries (PyPI) and the speech model (Hugging Face). Those services see an ordinary download request from your IP address. After set-up, the worker runs fully offline.
 - **Permissions.** Microphone for your voice, Screen Recording only to hear the meeting app's audio (no screen content is captured or stored) and Accessibility only to notice that a meeting window is open.
 - **Logs.** The app keeps technical logs in `~/Library/Application Support/lautli/logs/`. They contain no transcript text or audio. **Settings → Export diagnostics** creates a zip only when you ask, and you decide whether to share it.
