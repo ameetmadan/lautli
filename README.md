@@ -40,6 +40,10 @@ Afterwards lautli sits in the menu bar. It starts by itself when a Zoom or Teams
 
 Use headphones. With speakers the microphone hears the other participants too and lines can appear twice. There is no echo cancellation.
 
+## Names and jargon
+
+To stop names and acronyms being misspelled, create `~/Library/Application Support/lautli/vocabulary.txt` with one entry per line: `Ameet` teaches the model a term, `Amit => Ameet` also rewrites a known mistake in the output. Lines starting with `#` are comments. Restart the transcription to apply changes.
+
 ## Use your transcripts with an AI app
 
 **Settings → Connect to AI app** copies the setup for Claude Code, Codex, Claude Desktop or Cursor. Paste it into that app once, restart it, and ask things like "list my meetings from this week" or "turn the action points from yesterday's standup into tasks". If the app also has a task tool such as Asana connected, it can create the tasks itself.

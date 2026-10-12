@@ -67,6 +67,7 @@ final class WorkerClient: ObservableObject {
         process.currentDirectoryURL = paths.workerSource
         process.environment = ProcessInfo.processInfo.environment.merging([
             "WHISPER_MODEL_PATH": paths.modelDirectory.path,
+            "LAUTLI_VOCABULARY_FILE": paths.vocabulary.path,
             "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1",
             // The worker lives inside the signed app bundle; writing bytecode there would break its signature.
             "PYTHONDONTWRITEBYTECODE": "1",

@@ -23,6 +23,8 @@ struct AppPaths: Sendable {
     var runtime: URL { support.appending(path: "runtime", directoryHint: .isDirectory) }
     var python: URL { runtime.appending(path: "python/bin/python3") }
     var modelDirectory: URL { support.appending(path: "models/flix-swissgerman-full", directoryHint: .isDirectory) }
+    /// Optional user file of names and jargon (`Term` or `wrong => Right`, one per line) that biases and corrects transcription.
+    var vocabulary: URL { support.appending(path: "vocabulary.txt") }
     var logs: URL { support.appending(path: "logs", directoryHint: .isDirectory) }
     var requirements: URL { workerSource.appending(path: "requirements.txt") }
 }

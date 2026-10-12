@@ -6,6 +6,7 @@ import numpy as np
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
 from scripts.asr_probe import segment_records
+from worker.lautli_worker.cleanup import apply_replacements, collapse_repetitions, is_hallucination, parse_vocabulary
 from worker.lautli_worker.device import pick_device
 from worker.lautli_worker.model_spec import MODEL_ID, MODEL_REVISION
 from worker.lautli_worker.protocol import AudioWindow, ProtocolError, Stop, encode_message, parse_message
@@ -25,15 +26,31 @@ def load_recognizer():
         feature_extractor=processor.feature_extractor, dtype=dtype, device=device,
     )
 
+    vocabulary_file = os.environ.get("LAUTLI_VOCABULARY_FILE", "")
+    terms, replacements = parse_vocabulary(open(vocabulary_file, encoding="utf-8").read()) if os.path.isfile(vocabulary_file) else ([], {})
+    generate_kwargs = {
+        "language": "german", "task": "transcribe",
+        # Retry hotter when a decode loops or is low-confidence, and never feed a bad decode into the next one.
+        "temperature": (0.0, 0.2, 0.4, 0.6, 0.8, 1.0), "compression_ratio_threshold": 1.35,
+        "logprob_threshold": -1.0, "no_speech_threshold": 0.6, "condition_on_prev_tokens": False,
+    }
+    if terms:
+        generate_kwargs["prompt_ids"] = processor.get_prompt_ids(", ".join(dict.fromkeys(terms)), return_tensors="pt").to(device)
+
     def recognize(samples: list[float]) -> list[dict]:
         if not has_audio_energy(samples):
             return []
         result = recognizer(
             {"raw": np.asarray(samples, dtype=np.float32), "sampling_rate": 16_000},
-            chunk_length_s=30, stride_length_s=(5, 5), return_timestamps=True,
-            generate_kwargs={"language": "german", "task": "transcribe"},
+            chunk_length_s=30, stride_length_s=(5, 5), return_timestamps=True, generate_kwargs=generate_kwargs,
         )
-        return segment_records(result)
+        segments = []
+        for segment in segment_records(result):
+            if is_hallucination(segment["text"]):
+                continue
+            segment["text"] = apply_replacements(collapse_repetitions(segment["text"]), replacements)
+            segments.append(segment)
+        return segments
 
     return recognize
 
