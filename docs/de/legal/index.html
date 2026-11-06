@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Rechtliches: Datenschutz und Drittanbieter-Hinweise | lautli</title>
+    <meta
+      name="description"
+      content="Datenschutzerklärung, Einwilligung zur Aufzeichnung und Drittanbieter-Lizenzen von lautli, der Offline-Transkriptions-App für Schweizerdeutsch auf dem Mac."
+    />
+    <link
+      rel="canonical"
+      href="https://ameetmadan.github.io/lautli/de/legal/"
+    />
+    <link
+      rel="alternate"
+      hreflang="en"
+      href="https://ameetmadan.github.io/lautli/legal/"
+    />
+    <link
+      rel="alternate"
+      hreflang="de"
+      href="https://ameetmadan.github.io/lautli/de/legal/"
+    />
+    <link
+      rel="alternate"
+      hreflang="x-default"
+      href="https://ameetmadan.github.io/lautli/legal/"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="../../favicon-32.png"
+    />
+    <link rel="apple-touch-icon" href="../../apple-touch-icon.png" />
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <header>
+      <a href="../"><strong>lautli</strong></a>
+      <nav aria-label="Sprache">
+        <a href="../../legal/" hreflang="en" lang="en">English</a>
+      </nav>
+    </header>
+    <main>
+      <h1>Rechtliches</h1>
+      <p class="lead">
+        Datenschutz, Einwilligung zur Aufzeichnung und die Lizenzen der
+        Software, die lautli herunterlädt.
+      </p>
+
+      <h2 id="datenschutz">Datenschutz</h2>
+      <p>lautli verarbeitet Meeting-Audio ausschliesslich auf Ihrem Mac.</p>
+      <ul>
+        <li>
+          <strong>Keine Telemetrie.</strong> Die App sendet keine Analysedaten,
+          Nutzungsdaten oder Absturzberichte.
+        </li>
+        <li>
+          <strong>Audio wird nie gespeichert.</strong> Audio wird im
+          Arbeitsspeicher in Text umgewandelt und verworfen.
+        </li>
+        <li>
+          <strong>Transkripte bleiben lokal.</strong> Der Text wird in
+          <code>~/Documents/lautli/</code> geschrieben. Hochdeutsche Notizen
+          erstellt das On-Device-Modell von Apple ab macOS 26. Es wird nichts
+          hochgeladen.
+        </li>
+        <li>
+          <strong>KI-Apps, die Sie verbinden.</strong> Wenn Sie Claude, Codex,
+          Cursor oder eine andere KI-App über
+          <strong>Einstellungen → Mit KI-App verbinden</strong> anbinden, kann
+          diese App Ihre Transkripte und Notizen auf Anfrage lesen. Der Anbieter
+          sieht den Text dann gemäss seinen eigenen Datenschutzbestimmungen.
+          lautli selbst sendet nichts, und die Verbindung ist schreibgeschützt.
+        </li>
+        <li>
+          <strong>Netzwerknutzung.</strong> Beim ersten Start werden die
+          Python-Laufzeit (GitHub), Python-Bibliotheken (PyPI) und das
+          Sprachmodell (Hugging Face) heruntergeladen. Diese Dienste sehen eine
+          gewöhnliche Download-Anfrage von Ihrer IP-Adresse. Nach der
+          Einrichtung läuft der Worker vollständig offline.
+        </li>
+        <li>
+          <strong>Berechtigungen.</strong> Mikrofon für Ihre Stimme,
+          Bildschirmaufnahme nur, um das Audio der Meeting-App zu hören (es
+          werden keine Bildschirminhalte erfasst oder gespeichert) und
+          Bedienungshilfen nur, um zu erkennen, dass ein Meeting-Fenster
+          geöffnet ist.
+        </li>
+        <li>
+          <strong>Protokolle.</strong> Die App führt technische Protokolle in
+          <code>~/Library/Application Support/lautli/logs/</code>. Sie enthalten
+          weder Transkripttext noch Audio.
+          <strong>Einstellungen → Diagnosedaten exportieren</strong> erstellt
+          nur auf Ihren Wunsch ein Zip, und Sie entscheiden, ob Sie es
+          weitergeben.
+        </li>
+      </ul>
+      <p>
+        Falls künftig Absturzberichte hinzukommen, sind sie freiwillig und
+        werden zuerst hier dokumentiert.
+      </p>
+
+      <h2 id="einwilligung">Einwilligung zur Aufzeichnung</h2>
+      <p>
+        Das Transkribieren eines Gesprächs kann die Zustimmung aller Beteiligten
+        erfordern. Sie sind dafür verantwortlich, die Teilnehmenden zu
+        informieren. Die App bittet Sie, dies einmalig zu bestätigen.
+      </p>
+
+      <h2 id="lizenz">Lizenz</h2>
+      <p>
+        lautli steht unter der
+        <a href="https://github.com/ameetmadan/lautli/blob/main/LICENSE"
+          >Apache License 2.0</a
+        >. Copyright 2026 Ameet Madan.
+      </p>
+
+      <h2 id="drittanbieter">Drittanbieter-Hinweise</h2>
+      <p>
+        lautli lädt beim ersten Start die folgenden Komponenten herunter und
+        führt sie aus. Für jede gilt ihre eigene Lizenz.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Komponente</th>
+            <th scope="col">Lizenz</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              Schweizerdeutsch-Modell <code>Flix-AI/flix-swissgerman-full</code>
+              (von Whisper abgeleitet)
+            </td>
+            <td>Apache-2.0 (zugrunde liegende OpenAI-Whisper-Gewichte: MIT)</td>
+          </tr>
+          <tr>
+            <td>python-build-standalone CPython 3.13</td>
+            <td>
+              Python Software Foundation License und Lizenzen der enthaltenen
+              Komponenten
+            </td>
+          </tr>
+          <tr>
+            <td>PyTorch</td>
+            <td>BSD-3-Clause</td>
+          </tr>
+          <tr>
+            <td>Transformers</td>
+            <td>Apache-2.0</td>
+          </tr>
+          <tr>
+            <td>Accelerate</td>
+            <td>Apache-2.0</td>
+          </tr>
+          <tr>
+            <td>huggingface_hub</td>
+            <td>Apache-2.0</td>
+          </tr>
+          <tr>
+            <td>NumPy</td>
+            <td>BSD-3-Clause</td>
+          </tr>
+          <tr>
+            <td>SoundFile</td>
+            <td>BSD-3-Clause</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Die App selbst verwendet nur Apple-Systemframeworks. Massgebend ist die
+        englische Fassung in
+        <a href="https://github.com/ameetmadan/lautli/blob/main/PRIVACY.md"
+          >PRIVACY.md</a
+        >
+        und
+        <a
+          href="https://github.com/ameetmadan/lautli/blob/main/THIRD_PARTY_NOTICES.md"
+          >THIRD_PARTY_NOTICES.md</a
+        >
+        im Repository.
+      </p>
+    </main>
+    <footer>
+      <a href="../">Startseite</a> ·
+      <a href="https://github.com/ameetmadan/lautli#readme"
+        >Installationsanleitung</a
+      >
+      ·
+      <a href="https://github.com/ameetmadan/lautli">Quellcode auf GitHub</a> ·
+      <a href="https://github.com/ameetmadan/lautli/issues">Problem melden</a>
+    </footer>
+  </body>
+</html>

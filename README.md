@@ -72,6 +72,10 @@ See [PRIVACY.md](PRIVACY.md). In short: everything runs on your Mac, there is no
 
 The model has been exercised on synthetic Standard German on an M1 Pro with 16 GB, not yet on real Swiss German meetings, real Zoom or Teams calls, or the lowest supported hardware. Expect rough edges and review transcripts before relying on them. Tracking issue: #7.
 
+## License
+
+lautli is licensed under the [Apache License 2.0](LICENSE). Copyright 2026 Ameet Madan. Components it downloads carry their own licenses, listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
 ## Developing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Third-party licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
