@@ -10,4 +10,14 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://ameetmadan.github.io/lautli/"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://ameetmadan.github.io/lautli/de/"/>
   </url>
+  <url>
+    <loc>https://ameetmadan.github.io/lautli/legal/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ameetmadan.github.io/lautli/legal/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://ameetmadan.github.io/lautli/de/legal/"/>
+  </url>
+  <url>
+    <loc>https://ameetmadan.github.io/lautli/de/legal/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ameetmadan.github.io/lautli/legal/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://ameetmadan.github.io/lautli/de/legal/"/>
+  </url>
 </urlset>

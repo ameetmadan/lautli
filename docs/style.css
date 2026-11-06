@@ -96,3 +96,15 @@ footer {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.95rem;
+}
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  border-bottom: 1px solid var(--card);
+}
