@@ -19,7 +19,7 @@ jobs:
     outputs:
       tag: ${{ steps.next.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - id: next
@@ -50,7 +50,7 @@ jobs:
     if: needs.version.outputs.tag != ''
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Run tests
         run: swift test --package-path macos
       - name: Import Developer ID certificate
