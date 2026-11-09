@@ -27,7 +27,15 @@ LAUTLI_E2E=1 LAUTLI_E2E_DIR=/tmp/mn-e2e swift test --package-path macos --filter
 
 Live capture sends overlapping `audio_window` messages with `mode: "live"` (the default). Imported recordings send bounded, non-overlapping `audio_window` messages with `mode: "file"`, using the same 16 kHz mono float32 payload and recording-relative `start_ms`. File windows produce final segments followed by `window_complete` with `session_id`, `start_ms` and `sample_count`. The client must wait for this acknowledgement before sending the next window. `stop` resets the session without unloading the model; modes cannot be mixed within one session.
 
-`AudioFileDecoder` converts audio incrementally with AVFoundation. `FileTranscriptionQueue` owns file decoding and transcript stores, and reserves the shared worker until a window and its session stop have completed. Live capture can then use the worker while the queue retains the decoder position. Queue controls and storage are tested using synthetic audio and a worker stub; Python tests cover the protocol separately. Real codec/call and long-recording validation remains necessary.
+`AudioFileDecoder` converts audio incrementally with AVFoundation. `FileTranscriptionQueue` owns file decoding and transcript stores, and reserves the shared worker until a window and its session stop have completed. Live capture can then use the worker while the queue retains the decoder position. Queue controls and storage are tested using synthetic audio and a worker stub; Python tests cover the protocol separately. Native decoder tests cover several WAV sample rates/channel layouts, M4A/AAC, silence and an incrementally generated 60-minute-plus WAV. Stereo fixtures use different signals per channel to catch channel loss; conversion must enable downmixing. Actual call/recognition quality, MP3 and sustained inference validation remain necessary.
+
+To exercise the actual installed worker and MCP server against temporary, generated Standard German speech:
+
+```sh
+LAUTLI_FILE_E2E=1 swift test --package-path macos --filter FileTranscriptionEndToEndTests
+```
+
+This opt-in test requires an already-installed lautli runtime/model and the macOS Anna speech voice; it performs no setup downloads. It generates three recordings, a silent WAV and corrupt input; checks real speech output, failure isolation, source preservation and silent output; then lists, reads and searches the resulting transcripts through MCP JSON-RPC stdio. Temporary support/log/output directories keep existing user recordings, transcripts and logs untouched. It checks synthetic fixture strings against worker logs, but does not replace a network-isolation test or real meeting validation.
 
 ## Running a development build
 

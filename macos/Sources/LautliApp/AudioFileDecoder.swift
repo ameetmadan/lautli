@@ -15,13 +15,15 @@ actor AudioFileDecoder {
     let duration: Double
 
     init(url: URL) throws {
-        file = try AVAudioFile(forReading: url)
+        do { file = try AVAudioFile(forReading: url) }
+        catch { throw FileTranscriptionError.unreadable }
         guard file.length > 0,
               file.processingFormat.sampleRate > 0,
               let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16_000, channels: 1, interleaved: false),
               let converter = AVAudioConverter(from: file.processingFormat, to: format) else {
             throw FileTranscriptionError.unreadable
         }
+        converter.downmix = true
         self.converter = converter
         outputFormat = format
         duration = Double(file.length) / file.processingFormat.sampleRate

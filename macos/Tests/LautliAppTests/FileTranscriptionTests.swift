@@ -43,7 +43,7 @@ final class FileTranscriptionTests: XCTestCase {
             queue.receive(["segment": ["id": UUID().uuidString, "text": "Test speech", "stability": "final", "start_ms": chunk.startMs, "end_ms": chunk.startMs + 50]])
         }
         let sources = try (1...3).map { try recording(root, name: "source-\($0).wav") }
-        queue.add([root.appending(path: "corrupt.mp3")] + sources)
+        queue.add([root.appending(path: "missing.mp3")] + sources)
         queue.updateAvailability(workerReady: true, liveSessionActive: false)
         await drain(queue)
         guard case .failed = queue.jobs[0].state else { return XCTFail("Unreadable input must fail") }
@@ -161,6 +161,131 @@ final class FileTranscriptionTests: XCTestCase {
         XCTAssertEqual(worker.state, .ready)
     }
 
+    func testInvalidAudioFilesHaveDecodeGuidanceAndDoNotBlockValidFiles() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let invalid: [(String, Data)] = [
+            ("empty.wav", Data()),
+            ("corrupt.wav", Data("RIFF\u{00}\u{00}\u{00}\u{00}WAVEfmt ".utf8)),
+            ("unsupported.audio", Data("This is not an audio recording".utf8)),
+        ]
+        var inputs: [URL] = []
+        for (name, bytes) in invalid {
+            let url = root.appending(path: name)
+            try bytes.write(to: url)
+            inputs.append(url)
+        }
+        let emptyAudio = root.appending(path: "header-only.wav")
+        do {
+            let format = try XCTUnwrap(AVAudioFormat(standardFormatWithSampleRate: 16_000, channels: 1))
+            let file = try AVAudioFile(forWriting: emptyAudio, settings: format.settings)
+            XCTAssertEqual(file.length, 0)
+        }
+        inputs.append(emptyAudio)
+        let worker = FileWorkerStub()
+        let queue = FileTranscriptionQueue(worker: worker, documentsRoot: root)
+        queue.add(inputs + [root.appending(path: "missing.wav"), try recording(root, name: "valid.wav")])
+        queue.updateAvailability(workerReady: true, liveSessionActive: false)
+        await drain(queue)
+        for job in queue.jobs.dropLast() {
+            guard case .failed(let message) = job.state else { return XCTFail("Invalid input must fail") }
+            XCTAssertEqual(message, FileTranscriptionError.unreadable.localizedDescription)
+            XCTAssertFalse(message.contains(root.path), "Do not expose private file paths")
+        }
+        guard case .completed = queue.jobs.last?.state else { return XCTFail("Valid file after invalid inputs must finish") }
+        XCTAssertEqual(worker.starts, [0])
+        let finishedStates = queue.jobs.map(\.state)
+        await queue.shutdown()
+        XCTAssertEqual(queue.jobs.map(\.state), finishedStates, "Shutdown must preserve completed output and failed-job information")
+    }
+
+    func testRemovingPendingFilesDuringProcessingPreservesActiveJob() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let worker = FileWorkerStub()
+        let queue = FileTranscriptionQueue(worker: worker, documentsRoot: root)
+        queue.add([try recording(root, name: "active.wav", seconds: 21), try recording(root, name: "remove.wav"), try recording(root, name: "last.wav")])
+        let removed = queue.jobs[1].id
+        worker.onChunk = { _ in queue.cancel(removed) }
+        queue.updateAvailability(workerReady: true, liveSessionActive: false)
+        await drain(queue)
+        XCTAssertEqual(queue.jobs.map { $0.source.lastPathComponent }, ["active.wav", "last.wav"])
+        XCTAssertEqual(worker.starts, [0, 20_000, 0])
+        for job in queue.jobs {
+            guard case .completed = job.state else { return XCTFail("Remaining jobs must complete") }
+        }
+    }
+
+    func testCancellingPausedFileDoesNotStopLiveWorkerAndNextJobWaits() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let worker = FileWorkerStub()
+        let queue = FileTranscriptionQueue(worker: worker, documentsRoot: root)
+        queue.add([try recording(root, name: "pause.wav", seconds: 21), try recording(root, name: "next.wav")])
+        worker.onChunk = { _ in queue.updateAvailability(workerReady: true, liveSessionActive: true) }
+        queue.updateAvailability(workerReady: true, liveSessionActive: false)
+        await drain(queue)
+        XCTAssertEqual(queue.jobs[0].state, .paused)
+        let stops = worker.stops
+        queue.cancel(queue.jobs[0].id)
+        XCTAssertEqual(queue.jobs[0].state, .cancelled)
+        XCTAssertEqual(queue.jobs[1].state, .queued)
+        XCTAssertEqual(worker.stops, stops, "The paused file has already released the worker")
+        XCTAssertFalse(queue.ownsWorker)
+        worker.onChunk = nil
+        queue.updateAvailability(workerReady: true, liveSessionActive: false)
+        await drain(queue)
+        guard case .completed = queue.jobs[1].state else { return XCTFail("Next file must resume when live ends") }
+    }
+
+    func testShutdownWhileWindowInFlightCancelsUnfinishedJobsAndRemovesSnippets() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let worker = FileWorkerStub()
+        let queue = FileTranscriptionQueue(worker: worker, documentsRoot: root)
+        worker.holdWindow = true
+        worker.onChunk = { chunk in
+            queue.receive(["segment": ["id": UUID().uuidString, "text": "Partial text", "stability": "final", "start_ms": chunk.startMs, "end_ms": 50]])
+        }
+        queue.add([try recording(root, name: "active.wav", seconds: 21), try recording(root, name: "pending.wav")])
+        queue.updateAvailability(workerReady: true, liveSessionActive: false)
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while worker.pendingWindow == nil && ContinuousClock.now < deadline { await Task.yield() }
+        guard let pending = worker.pendingWindow else {
+            worker.holdWindow = false
+            await queue.shutdown()
+            return XCTFail("Worker did not receive the first window")
+        }
+        let acknowledgement = Task { @MainActor in
+            pending.resume()
+            worker.pendingWindow = nil
+        }
+        // shutdown sets its flags on this actor before yielding to the acknowledgement task.
+        await queue.shutdown()
+        await acknowledgement.value
+        XCTAssertFalse(queue.ownsWorker)
+        XCTAssertEqual(queue.jobs.map(\.state), [.cancelled, .cancelled])
+        XCTAssertEqual(worker.starts, [0])
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: root.appending(path: "lautli").path).isEmpty)
+    }
+
+    func testShutdownOfPausedFileDoesNotTouchLiveWorker() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let worker = FileWorkerStub()
+        let queue = FileTranscriptionQueue(worker: worker, documentsRoot: root)
+        queue.add([try recording(root, seconds: 21)])
+        worker.onChunk = { _ in queue.updateAvailability(workerReady: true, liveSessionActive: true) }
+        queue.updateAvailability(workerReady: true, liveSessionActive: false)
+        await drain(queue)
+        let stops = worker.stops
+        await queue.shutdown()
+        XCTAssertEqual(queue.jobs[0].state, .cancelled)
+        XCTAssertEqual(worker.stops, stops)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: root.appending(path: "lautli").path).isEmpty)
+    }
+
     private func drain(_ queue: FileTranscriptionQueue) async {
         let deadline = ContinuousClock.now.advanced(by: .seconds(5))
         while ContinuousClock.now < deadline {
@@ -177,11 +302,14 @@ private final class FileWorkerStub: FileTranscriptionWorker {
     var starts: [Int64] = []
     var stops = 0
     var unavailable = false
+    var holdWindow = false
+    var pendingWindow: CheckedContinuation<Void, Never>?
     var onChunk: ((FileAudioChunk) -> Void)?
     func transcribeFileChunk(_ chunk: FileAudioChunk) async throws {
         if unavailable { throw FileTranscriptionError.workerUnavailable }
         starts.append(chunk.startMs)
         onChunk?(chunk)
+        if holdWindow { await withCheckedContinuation { pendingWindow = $0 } }
     }
     func finishFileSession() async throws {
         if unavailable { throw FileTranscriptionError.workerUnavailable }

@@ -16,6 +16,8 @@ struct FileQueueView: View {
                     row(job)
                 }
                 .padding(.vertical, 6)
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(job.source.lastPathComponent)
             }
         }
         .padding(20)
@@ -28,6 +30,7 @@ struct FileQueueView: View {
             HStack {
                 Text("Queued")
                 Button("Remove") { queue.cancel(job.id) }
+                .accessibilityLabel(tr("Remove \(job.source.lastPathComponent)"))
             }
         case .processing, .paused:
             ProgressView(value: job.progress)
@@ -35,16 +38,20 @@ struct FileQueueView: View {
             HStack {
                 Text(job.state == .paused ? tr("Paused for a live meeting") : tr("Processing"))
                 Button("Cancel") { queue.cancel(job.id) }
+                .accessibilityLabel(tr("Cancel \(job.source.lastPathComponent)"))
             }
         case .completed(let url):
             HStack {
                 Text("Completed")
                 Button("Open transcript") { NSWorkspace.shared.open(url) }
+                .accessibilityLabel(tr("Open transcript for \(job.source.lastPathComponent)"))
                 Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+                .accessibilityLabel(tr("Show in Finder: \(job.source.lastPathComponent)"))
             }
         case .failed(let message):
             Text(message).foregroundStyle(.red)
             Button("Retry") { queue.retry(job.id) }
+            .accessibilityLabel(tr("Retry \(job.source.lastPathComponent)"))
         case .cancelled: Text("Cancelled")
         }
     }
