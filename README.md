@@ -1,6 +1,6 @@
 # lautli
 
-A macOS menu-bar app that detects Zoom and Microsoft Teams meetings, transcribes them live in Swiss German on your Mac, and writes a Standard German transcript and summary. Audio and transcription never leave the Mac, and audio is never saved.
+A macOS menu-bar app that detects Zoom and Microsoft Teams meetings, transcribes them live in Swiss German on your Mac, and writes a Standard German transcript and summary. Audio and transcription never leave the Mac. Captured audio is never saved; imported recordings are left untouched.
 
 ## Install
 
@@ -40,6 +40,16 @@ Afterwards lautli sits in the menu bar. It starts by itself when a Zoom or Teams
 
 Use headphones. With speakers the microphone hears the other participants too and lines can appear twice. There is no echo cancellation.
 
+## Transcribing recordings
+
+Choose **Transcribe audio files…** in the menu and select multiple WAV, M4A/AAC or MP3 recordings. macOS decodes and converts the audio locally; unreadable or unsupported files report an error without blocking the rest of the queue. Runtime/model setup must be complete, but file import does not require microphone, Screen Recording or Accessibility permission.
+
+The **Audio file queue…** window shows each recording's processed-audio progress. You can remove pending files, cancel the current file, retry failures, and open completed transcripts or reveal them in Finder. Each recording produces a separate timestamped Markdown transcript in `~/Documents/lautli/`, with the source filename in its header. Timestamps are relative to the recording. Silent files can produce a transcript without speech lines.
+
+Live meetings take priority after the current audio window finishes. The queue resumes from that boundary when live transcription ends. A paused live meeting continues to reserve the worker until you stop it. Cancellation discards that file's partial output; failures retain saved snippets in hidden `.working-*` folders inside the output folder for recovery. Retrying starts the file from the beginning. Quitting clears unfinished jobs, so add those files again next time. Imported files do not generate automatic notes.
+
+File decoding and queue behavior are covered with synthetic WAV recordings, including stereo conversion from 44.1 kHz. Real M4A/MP3 recordings, recordings of at least 60 minutes, live-call handoff and inference performance still need validation before this feature is release-ready. Processing speed depends on your Mac; no completion-time estimate is shown.
+
 ## Names and jargon
 
 To stop names and acronyms being misspelled, create `~/Library/Application Support/lautli/vocabulary.txt` with one entry per line: `Ameet` teaches the model a term, `Amit => Ameet` also rewrites a known mistake in the output. Lines starting with `#` are comments. Restart the transcription to apply changes.
@@ -66,7 +76,7 @@ To remove everything, delete the app, `~/Library/Application Support/lautli` and
 
 ## Privacy
 
-See [PRIVACY.md](PRIVACY.md). In short: everything runs on your Mac, there is no telemetry, and audio is never saved. The only network use is the one-time download of the runtime and model.
+See [PRIVACY.md](PRIVACY.md). In short: everything runs on your Mac, there is no telemetry, and captured audio is never saved. Imported recordings remain untouched. The only network use is the one-time download of the runtime and model.
 
 ## Validation status
 

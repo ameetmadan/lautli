@@ -2,6 +2,7 @@ import AppKit
 import Combine
 import ServiceManagement
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct RunningApp: Identifiable, Equatable {
     let bundleIdentifier: String
@@ -63,6 +64,11 @@ final class MenuBarModel: ObservableObject {
     let monitor = MeetingMonitor()
     let audioCapture = AudioCapture()
     let worker = WorkerClient()
+    lazy var fileQueue: FileTranscriptionQueue = {
+        let queue = FileTranscriptionQueue(worker: worker)
+        queue.onYield = { [weak self] in self?.updateCapture(for: self?.monitor.activeMeetingBundleIdentifier) }
+        return queue
+    }()
     let setup = SetupManager()
     let permissions = PermissionsModel()
     private var subscriptions: [AnyCancellable] = []
@@ -83,6 +89,10 @@ final class MenuBarModel: ObservableObject {
             worker?.appendAudio(source: source, samples: samples, startMs: timestamp)
         }
         worker.onSegment = { [weak self] message in
+            if let self, self.fileQueue.ownsWorker {
+                self.fileQueue.receive(message)
+                return
+            }
             guard let segment = message["segment"] as? [String: Any],
                   segment["stability"] as? String == "final",
                   let id = segment["id"] as? String,
@@ -100,6 +110,7 @@ final class MenuBarModel: ObservableObject {
         }
         // Views read nested models through this one, so their changes must invalidate it too.
         subscriptions = [
+            fileQueue.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() },
             monitor.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() },
             audioCapture.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() },
             worker.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() },
@@ -144,6 +155,9 @@ final class MenuBarModel: ObservableObject {
         let isManual = manualApp != nil
         let wantsCapture = isBrowserTest || isManual || automaticStartEnabled || manuallyListening
         let canStart = !captureSuppressed && !isPaused && !consentRequired && wantsCapture
+        let liveRequested = (selectedBundleIdentifier != nil && canStart) || sessionStore != nil || isStartingCapture || isStoppingCapture || isPaused
+        fileQueue.updateAvailability(workerReady: worker.state == .ready || worker.state == .transcribing, liveSessionActive: liveRequested)
+        guard !fileQueue.ownsWorker else { return }
         if let selectedBundleIdentifier, canStart, worker.state == .ready {
             if audioCapture.state == .capturing, audioCapture.activeBundleIdentifier == selectedBundleIdentifier { return }
             if audioCapture.state == .capturing || isStoppingCapture {
@@ -304,6 +318,12 @@ final class MenuBarModel: ObservableObject {
     }
 
     private func finishCapture(completion: (() -> Void)? = nil) {
+        // Cancelling a pending live request must not stop a file session owned by the queue.
+        guard !fileQueue.ownsWorker else {
+            completion?()
+            updateCapture(for: monitor.activeMeetingBundleIdentifier)
+            return
+        }
         if isStoppingCapture {
             if let completion { stopCompletions.append(completion) }
             return
@@ -337,6 +357,17 @@ final class MenuBarModel: ObservableObject {
         let queuedCompletions = stopCompletions
         stopCompletions.removeAll()
         queuedCompletions.forEach { $0() }
+        updateCapture(for: monitor.activeMeetingBundleIdentifier)
+    }
+
+    func importAudioFiles() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.allowedContentTypes = [.wav, .mpeg4Audio, .mp3, .audio]
+        guard panel.runModal() == .OK else { return }
+        fileQueue.add(panel.urls)
+        updateCapture(for: monitor.activeMeetingBundleIdentifier)
     }
 
     // MARK: Notes and transcript files
@@ -420,6 +451,7 @@ final class MenuBarModel: ObservableObject {
         isShuttingDown = true
         notesTask?.cancel()
         monitor.stop()
+        await fileQueue.shutdown()
         await startTask?.value
         await audioCapture.stop()
         await withCheckedContinuation { continuation in
@@ -459,6 +491,7 @@ final class MenuBarModel: ObservableObject {
             return tr("Listening locally")
         case .idle:
             if consentRequired { return tr("Read the recording notice to start") }
+            if fileQueue.ownsWorker { return tr("Transcribing audio files locally") }
             if manuallyListening { return tr("Waiting for the meeting to start") }
             return switch monitor.detectionState {
             case .idle: tr("Waiting for Zoom or Teams")

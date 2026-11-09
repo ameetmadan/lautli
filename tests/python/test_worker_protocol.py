@@ -13,6 +13,27 @@ def test_audio_window_accepts_valid_local_float32_payload():
         "sample_rate_hz": 16_000, "samples_base64": samples,
     }))
     assert message.sample_count == 16_000
+    assert message.mode == "live"
+
+
+@pytest.mark.parametrize("mode", ["live", "file"])
+def test_audio_window_accepts_explicit_mode(mode):
+    message = parse_message(json.dumps({
+        "type": "audio_window", "session_id": "file-1", "start_ms": 50,
+        "sample_rate_hz": 16_000, "samples_base64": base64.b64encode(bytes(4)).decode(),
+        "mode": mode,
+    }))
+    assert message.mode == mode
+
+
+@pytest.mark.parametrize("mode", [None, 1, True, [], {}, "offline", ""])
+def test_audio_window_rejects_unknown_or_malformed_mode(mode):
+    with pytest.raises(ProtocolError, match="mode must be live or file"):
+        parse_message(json.dumps({
+            "type": "audio_window", "session_id": "file-1", "start_ms": 0,
+            "sample_rate_hz": 16_000, "samples_base64": base64.b64encode(bytes(4)).decode(),
+            "mode": mode,
+        }))
 
 
 @pytest.mark.parametrize("value", ["{", "{}", json.dumps({"type": "stop", "session_id": ""})])

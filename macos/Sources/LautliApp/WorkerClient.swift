@@ -30,12 +30,50 @@ private final class WorkerOutputBuffer: @unchecked Sendable {
 }
 
 @MainActor
-final class WorkerClient: ObservableObject {
+final class WorkerClient: ObservableObject, FileTranscriptionWorker {
     enum State: Equatable {
         case stopped, starting, ready, transcribing, failed(String)
     }
 
-    @Published private(set) var state: State = .stopped
+    @Published private(set) var state: State = .stopped {
+        didSet {
+            if case .failed = state { failFileRequests() }
+            if state == .stopped { failFileRequests() }
+        }
+    }
+    private var fileWindow: (startMs: Int64, count: Int, continuation: CheckedContinuation<Void, Error>)?
+    private var fileStop: CheckedContinuation<Void, Error>?
+
+    private func failFileRequests() {
+        let pending = fileWindow
+        fileWindow = nil
+        pending?.continuation.resume(throwing: FileTranscriptionError.workerUnavailable)
+        let stop = fileStop
+        fileStop = nil
+        stop?.resume(throwing: FileTranscriptionError.workerUnavailable)
+    }
+
+    func transcribeFileChunk(_ chunk: FileAudioChunk) async throws {
+        guard process.isRunning, state == .ready || state == .transcribing,
+              fileWindow == nil, fileStop == nil, audioBySource.isEmpty else {
+            throw FileTranscriptionError.workerUnavailable
+        }
+        try await withCheckedThrowingContinuation { continuation in
+            fileWindow = (chunk.startMs, chunk.samples.count, continuation)
+            writeAudioWindow(samples: chunk.samples, startMs: chunk.startMs, source: .meetingOutput, mode: "file")
+        }
+    }
+
+    func finishFileSession() async throws {
+        guard process.isRunning, state == .ready || state == .transcribing,
+              fileWindow == nil, fileStop == nil else {
+            throw FileTranscriptionError.workerUnavailable
+        }
+        try await withCheckedThrowingContinuation { continuation in
+            fileStop = continuation
+            write(["type": "stop", "session_id": sessionID])
+        }
+    }
     var onSegment: (([String: Any]) -> Void)?
     var onStopComplete: (() -> Void)?
     private var process = Process()
@@ -45,7 +83,7 @@ final class WorkerClient: ObservableObject {
     private var outputBuffer = WorkerOutputBuffer()
     nonisolated private let stdoutReadQueue = DispatchQueue(label: "worker.stdout.reader")
     private var outputRemainder = Data()
-    private let sessionID = UUID().uuidString
+    private var sessionID = UUID().uuidString
     private var audioBySource: [AudioSource: (startMs: Int64, samples: [Float])] = [:]
     private var writeBusy = false
     private let writer = DispatchQueue(label: "worker.stdin.writer")
@@ -149,7 +187,7 @@ final class WorkerClient: ObservableObject {
         audioBySource[source] = stream
     }
 
-    private func writeAudioWindow(samples: [Float], startMs: Int64, source: AudioSource) {
+    private func writeAudioWindow(samples: [Float], startMs: Int64, source: AudioSource, mode: String = "live") {
         var pcm = Data(capacity: samples.count * MemoryLayout<Float>.size)
         for sample in samples {
             var bits = sample.bitPattern.littleEndian
@@ -158,7 +196,7 @@ final class WorkerClient: ObservableObject {
         let message: [String: Any] = [
             "type": "audio_window", "session_id": sessionID,
             "start_ms": startMs, "sample_rate_hz": 16_000,
-            "samples_base64": pcm.base64EncodedString(), "source": source.rawValue,
+            "samples_base64": pcm.base64EncodedString(), "source": source.rawValue, "mode": mode,
         ]
         guard let data = encoded(message) else { return }
         enqueue(data)
@@ -179,6 +217,7 @@ final class WorkerClient: ObservableObject {
     }
 
     func terminate() {
+        failFileRequests()
         output.fileHandleForReading.readabilityHandler = nil
         if process.isRunning { process.terminate() }
         input.fileHandleForWriting.closeFile()
@@ -225,6 +264,10 @@ final class WorkerClient: ObservableObject {
                 case "ready":
                     state = .ready
                     if value["message"] as? String == "Transcription stopped" {
+                        sessionID = UUID().uuidString
+                        let pendingStop = fileStop
+                        fileStop = nil
+                        pendingStop?.resume()
                         onStopComplete?()
                         onStopComplete = nil
                     }
@@ -232,6 +275,16 @@ final class WorkerClient: ObservableObject {
                 case "failed": state = .failed(value["message"] as? String ?? tr("Local worker failed."))
                 default: state = .failed(tr("Worker sent an unknown status."))
                 }
+            } else if type == "window_complete" {
+                guard let pending = fileWindow,
+                      value["session_id"] as? String == sessionID,
+                      value["start_ms"] as? Int64 == pending.startMs,
+                      value["sample_count"] as? Int == pending.count else {
+                    state = .failed(tr("Worker sent malformed output; transcription stopped."))
+                    return
+                }
+                fileWindow = nil
+                pending.continuation.resume()
             } else if type == "segment" {
                 onSegment?(value)
             } else {

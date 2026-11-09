@@ -66,6 +66,12 @@ struct MenuContentView: View {
                 }
             }
             Divider()
+            Button("Transcribe audio files…") {
+                model.importAudioFiles()
+                show("fileQueue")
+            }
+            .disabled(!model.setup.isReady || !model.recordingNoticeAcknowledged)
+            Button("Audio file queue…") { show("fileQueue") }
             Button("Transcript…") { show("transcript") }
             Button("Settings…") { show("settings") }
             Button("Quit") {
@@ -129,7 +135,7 @@ struct MenuContentView: View {
                     Button(app.name) { model.listen(to: app) }
                 }
             }
-            .disabled(model.worker.state != .ready || !model.recordingNoticeAcknowledged)
+            .disabled((model.worker.state != .ready && !model.fileQueue.ownsWorker) || !model.recordingNoticeAcknowledged)
         }
     }
 }

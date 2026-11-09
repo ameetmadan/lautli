@@ -23,6 +23,12 @@ An opt-in test runs the whole first-run setup and loads the worker (downloads ab
 LAUTLI_E2E=1 LAUTLI_E2E_DIR=/tmp/mn-e2e swift test --package-path macos --filter SetupEndToEndTests
 ```
 
+## File transcription protocol
+
+Live capture sends overlapping `audio_window` messages with `mode: "live"` (the default). Imported recordings send bounded, non-overlapping `audio_window` messages with `mode: "file"`, using the same 16 kHz mono float32 payload and recording-relative `start_ms`. File windows produce final segments followed by `window_complete` with `session_id`, `start_ms` and `sample_count`. The client must wait for this acknowledgement before sending the next window. `stop` resets the session without unloading the model; modes cannot be mixed within one session.
+
+`AudioFileDecoder` converts audio incrementally with AVFoundation. `FileTranscriptionQueue` owns file decoding and transcript stores, and reserves the shared worker until a window and its session stop have completed. Live capture can then use the worker while the queue retains the decoder position. Queue controls and storage are tested using synthetic audio and a worker stub; Python tests cover the protocol separately. Real codec/call and long-recording validation remains necessary.
+
 ## Running a development build
 
 ```sh
