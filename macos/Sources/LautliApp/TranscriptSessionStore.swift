@@ -12,12 +12,14 @@ final class TranscriptSessionStore {
     private let root: URL
     private let snippetsDirectory: URL
     private let startedAt: Date
+    private let sourceFilename: String?
     private var storedIDs = Set<String>()
     var workingDirectoryPath: String { snippetsDirectory.path }
 
-    init(documentsRoot: URL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0], startedAt: Date = Date()) throws {
+    init(documentsRoot: URL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0], startedAt: Date = Date(), sourceFilename: String? = nil) throws {
         self.root = documentsRoot.appending(path: "lautli", directoryHint: .isDirectory)
         self.startedAt = startedAt
+        self.sourceFilename = sourceFilename
         self.snippetsDirectory = root.appending(path: ".working-\(UUID().uuidString)", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: snippetsDirectory, withIntermediateDirectories: true)
     }
@@ -43,7 +45,8 @@ final class TranscriptSessionStore {
         let suffix = UUID().uuidString.prefix(8)
         let output = root.appending(path: "Transkript \(formatter.string(from: startedAt))-\(suffix).md")
         let body = segments.map { "- [\(timestamp($0.startMs))] \($0.text)" }.joined(separator: "\n")
-        let document = "# Meeting-Transkript\n\nErstellt: \(ISO8601DateFormatter().string(from: startedAt))\n\n\(body)\n"
+        let source = sourceFilename.map { "Quelldatei: " + $0.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\r", with: " ") + "\n\n" } ?? ""
+        let document = "# Meeting-Transkript\n\nErstellt: \(ISO8601DateFormatter().string(from: startedAt))\n\n\(source)\(body)\n"
         try Data(document.utf8).write(to: output, options: .atomic)
         try FileManager.default.removeItem(at: snippetsDirectory)
         return output

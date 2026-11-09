@@ -29,6 +29,13 @@ struct LautliApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
+        Window(tr("Audio file queue"), id: "fileQueue") {
+            FileQueueView(queue: model.fileQueue)
+                .environment(\.locale, model.language.locale)
+        }
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
+
         Window(tr("lautli Settings"), id: "settings") {
             SettingsView(model: model)
                 .environment(\.locale, model.language.locale)

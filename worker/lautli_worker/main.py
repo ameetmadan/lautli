@@ -1,5 +1,6 @@
 import os
 import sys
+import uuid
 from typing import TextIO
 
 import numpy as np
@@ -62,6 +63,7 @@ def serve(input_stream: TextIO, output_stream: TextIO, recognize) -> int:
 
     emit({"type": "status", "state": "ready", "message": f"{MODEL_ID} ({MODEL_REVISION[:12]}) ready locally"})
     session_id = None
+    session_mode = None
     transcriber = None
     for line in input_stream:
         try:
@@ -77,19 +79,55 @@ def serve(input_stream: TextIO, output_stream: TextIO, recognize) -> int:
                 for event in transcriber.flush():
                     emit(event)
             session_id = None
+            session_mode = None
             transcriber = None
             emit({"type": "status", "state": "ready", "message": "Transcription stopped"})
             continue
         if session_id is None:
             session_id = message.session_id
-            transcriber = StreamingTranscriber(session_id, recognize)
+            session_mode = message.mode
+            if session_mode == "live":
+                transcriber = StreamingTranscriber(session_id, recognize)
         if message.session_id != session_id or not isinstance(message, AudioWindow):
             emit({"type": "status", "state": "failed", "message": "Session ID mismatch"})
             return 2
+        if message.mode != session_mode:
+            emit({"type": "status", "state": "failed", "message": "Session mode mismatch"})
+            return 2
         samples = np.frombuffer(message.samples, dtype="<f4").astype(np.float32, copy=False).tolist()
-        for event in transcriber.process(message.start_ms, samples, message.source):
+        try:
+            if session_mode == "file":
+                emit({"type": "status", "state": "transcribing", "message": "Transcribing locally"})
+                events = file_window_events(message, samples, recognize)
+            else:
+                events = transcriber.process(message.start_ms, samples, message.source)
+        except Exception:
+            # Recognizer errors can include source audio or transcript content.
+            emit({"type": "status", "state": "failed", "message": "Local transcription failed"})
+            return 1
+        for event in events:
             emit(event)
     return 0
+
+
+def file_window_events(message: AudioWindow, samples: list[float], recognize) -> list[dict]:
+    """Commit a bounded, non-overlapping window before allowing its sender to advance."""
+    duration_ms = message.sample_count * 1000 // message.sample_rate_hz
+    events = []
+    for segment in recognize(samples):
+        text = str(segment["text"]).strip()
+        if not text:
+            continue
+        start = max(0, min(duration_ms, int(segment["start_ms"])))
+        end = max(start, min(duration_ms, int(segment["end_ms"])))
+        events.append({"type": "segment", "session_id": message.session_id, "segment": {
+            "id": str(uuid.uuid4()), "start_ms": message.start_ms + start,
+            "end_ms": message.start_ms + end, "text": text,
+            "stability": "final", "source": message.source,
+        }})
+    events.append({"type": "window_complete", "session_id": message.session_id,
+                   "start_ms": message.start_ms, "sample_count": message.sample_count})
+    return events
 
 
 def run() -> int:

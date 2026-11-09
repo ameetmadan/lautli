@@ -20,6 +20,7 @@ class AudioWindow:
     sample_rate_hz: int
     samples: bytes
     source: str
+    mode: str = "live"
 
     @property
     def sample_count(self) -> int:
@@ -64,9 +65,12 @@ def parse_message(line: str) -> AudioWindow | Stop:
     if not samples or len(samples) % 4 or len(samples) > SAMPLE_RATE_HZ * MAX_AUDIO_SECONDS * 4:
         raise ProtocolError("Audio window must contain 1 to 30 seconds of float32 samples")
     source = value.get("source", "meetingOutput")
-    if source not in {"meetingOutput", "microphone"}:
+    if not isinstance(source, str) or source not in {"meetingOutput", "microphone"}:
         raise ProtocolError("source must be meetingOutput or microphone")
-    return AudioWindow(session_id, start_ms, sample_rate, samples, source)
+    mode = value.get("mode", "live")
+    if not isinstance(mode, str) or mode not in {"live", "file"}:
+        raise ProtocolError("mode must be live or file")
+    return AudioWindow(session_id, start_ms, sample_rate, samples, source, mode)
 
 
 def encode_message(value: dict[str, Any]) -> str:

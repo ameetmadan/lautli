@@ -158,3 +158,39 @@
 "Copy config for Claude Desktop or Cursor" = "Konfiguration für Claude Desktop oder Cursor kopieren";
 "Finish setting up lautli first." = "Schliessen Sie zuerst die Einrichtung von lautli ab.";
 "Copied. If you move lautli to another folder, copy it again." = "Kopiert. Wenn Sie lautli in einen anderen Ordner verschieben, kopieren Sie es erneut.";
+
+"Could not decode this audio file. Try a readable WAV, M4A or MP3 recording." = "Diese Audiodatei konnte nicht gelesen werden. Versuche eine lesbare WAV-, M4A- oder MP3-Aufnahme.";
+
+"The transcription worker is unavailable. Restart it and retry the file." = "Der Transkriptionsprozess ist nicht verfügbar. Starte ihn neu und versuche die Datei erneut.";
+
+"File transcription failed. Saved snippets remain in Documents/lautli. Retry the file after checking its format and the worker." = "Die Dateitranskription ist fehlgeschlagen. Gespeicherte Textteile bleiben in Documents/lautli. Prüfe das Dateiformat und den Transkriptionsprozess und versuche es erneut.";
+
+"Transcribe audio files…" = "Audiodateien transkribieren…";
+
+"Audio file queue…" = "Audiodatei-Warteschlange…";
+
+"Audio file queue" = "Audiodatei-Warteschlange";
+
+"Transcribing audio files locally" = "Audiodateien werden lokal transkribiert";
+
+"Files stay on this Mac. Live meetings take priority. Quitting clears unfinished jobs; automatic notes are not generated." = "Die Dateien bleiben auf diesem Mac. Live-Meetings haben Vorrang. Beim Beenden gehen offene Aufträge verloren; automatische Notizen werden nicht erstellt.";
+
+"Choose Transcribe audio files… from the menu to add recordings." = "Wähle im Menü «Audiodateien transkribieren…», um Aufnahmen hinzuzufügen.";
+
+"Queued" = "In Warteschlange";
+
+"Remove" = "Entfernen";
+
+"Processed audio: %@" = "Verarbeitetes Audio: %@";
+
+"Paused for a live meeting" = "Für ein Live-Meeting pausiert";
+
+"Processing" = "Wird verarbeitet";
+
+"Cancel" = "Abbrechen";
+
+"Completed" = "Abgeschlossen";
+
+"Retry" = "Erneut versuchen";
+
+"Cancelled" = "Abgebrochen";
