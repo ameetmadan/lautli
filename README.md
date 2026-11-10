@@ -48,7 +48,15 @@ The **Audio file queue…** window shows each recording's processed-audio progre
 
 Live meetings take priority after the current audio window finishes. The queue resumes from that boundary when live transcription ends. A paused live meeting continues to reserve the worker until you stop it. Cancellation discards that file's partial output; failures retain saved snippets in hidden `.working-*` folders inside the output folder for recovery. Retrying starts the file from the beginning. Quitting clears unfinished jobs, so add those files again next time. Imported files do not generate automatic notes.
 
-File decoding and queue behavior are covered with synthetic WAV recordings, including stereo conversion from 44.1 kHz. Real M4A/MP3 recordings, recordings of at least 60 minutes, live-call handoff and inference performance still need validation before this feature is release-ready. Processing speed depends on your Mac; no completion-time estimate is shown.
+The native decoder is tested with generated audio in these formats:
+
+| Format | Tested input |
+|---|---|
+| WAV | 8/16 kHz mono; 22.05/44.1/48 kHz stereo, with both channels mixed into mono |
+| M4A/AAC | 44.1 kHz stereo, including the final partial window |
+| MP3 | Accepted by the file picker; decoder compatibility is not yet validated |
+
+Automated tests also cover silence and a 60-minute-plus WAV with bounded audio windows and continuous timestamps. These generated fixtures verify decoding, not real Swiss German recognition quality or hour-long inference performance. Real recordings, MP3, live-call handoff, keyboard/VoiceOver use, and inference speed/memory/thermals still need validation before this feature is release-ready. Processing speed depends on your Mac; no completion-time estimate is shown.
 
 ## Names and jargon
 

@@ -194,3 +194,13 @@
 "Retry" = "Erneut versuchen";
 
 "Cancelled" = "Abgebrochen";
+
+"Remove %@" = "%@ entfernen";
+
+"Cancel %@" = "%@ abbrechen";
+
+"Open transcript for %@" = "Transkript für %@ öffnen";
+
+"Show in Finder: %@" = "Im Finder anzeigen: %@";
+
+"Retry %@" = "%@ erneut versuchen";

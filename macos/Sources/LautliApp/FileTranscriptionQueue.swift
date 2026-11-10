@@ -174,5 +174,11 @@ final class FileTranscriptionQueue: ObservableObject {
         await task?.value
         store?.discard()
         clearActive()
+        for index in jobs.indices {
+            switch jobs[index].state {
+            case .queued, .processing, .paused: jobs[index].state = .cancelled
+            case .completed, .failed, .cancelled: break
+            }
+        }
     }
 }
