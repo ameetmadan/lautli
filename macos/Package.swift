@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [.executable(name: "LautliApp", targets: ["LautliApp"])],
     dependencies: [
-        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.8.0"),
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.10.1"),
     ],
     targets: [
         .executableTarget(name: "LautliApp", dependencies: [.product(name: "Sparkle", package: "Sparkle")]),
