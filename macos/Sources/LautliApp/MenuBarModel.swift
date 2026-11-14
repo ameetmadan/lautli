@@ -70,6 +70,7 @@ final class MenuBarModel: ObservableObject {
         return queue
     }()
     let setup = SetupManager()
+    let updater = AppUpdater()
     let permissions = PermissionsModel()
     private var subscriptions: [AnyCancellable] = []
     private var sessionStore: TranscriptSessionStore?
