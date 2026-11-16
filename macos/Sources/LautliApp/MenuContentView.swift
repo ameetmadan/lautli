@@ -74,6 +74,9 @@ struct MenuContentView: View {
             Button("Audio file queue…") { show("fileQueue") }
             Button("Transcript…") { show("transcript") }
             Button("Settings…") { show("settings") }
+            if model.updater.isAvailable {
+                Button("Check for updates…") { model.updater.checkForUpdates() }
+            }
             Button("Quit") {
                 Task {
                     await model.shutdown()

@@ -5,7 +5,7 @@
 - `macos/` is the Swift menu-bar app (capture, meeting detection, setup, UI).
 - `worker/lautli_worker/` is the Python transcription worker. The app talks to it with JSON lines over stdin/stdout.
 - `worker/lautli_worker/mcp_server.py` is the read-only MCP server AI apps connect to. It is standard library only on purpose: a new entry in `requirements.txt` changes the setup digest and sends every existing install back through dependency setup.
-- `scripts/` has the app and DMG build scripts, the ASR probe, the WER tool and `windows_feasibility.py`, which records hardware and measures whether a machine keeps pace with live transcription.
+- `scripts/` has the app, DMG and Sparkle appcast build scripts, the ASR probe, the WER tool and `windows_feasibility.py`, which records hardware and measures whether a machine keeps pace with live transcription.
 
 The packaged app does not bundle Python or the model. On first launch `SetupManager` downloads a pinned [python-build-standalone](https://github.com/astral-sh/python-build-standalone) runtime, installs `requirements.txt` into it and downloads the pinned model into `~/Library/Application Support/lautli/`. Each step records a marker, so setup is safe to repeat.
 
@@ -48,7 +48,7 @@ open "dist/lautli.app"
 
 Two environment variables redirect the app: `LAUTLI_SUPPORT_DIR` (where setup installs things) and `LAUTLI_WORKER_SRC` (a repo checkout to use instead of the bundled worker). Launch the binary directly to pass them, for example `LAUTLI_SUPPORT_DIR=/tmp/mn "dist/lautli.app/Contents/MacOS/LautliApp"`.
 
-Ad-hoc signed rebuilds look like a new app to macOS, so Screen Recording and Accessibility grants reset after every build. That is expected until releases are signed with a Developer ID.
+Ad-hoc signed rebuilds look like a new app to macOS, so Screen Recording and Accessibility grants reset after every local build. Releases signed with a Developer ID keep their grants across updates.
 
 ## Adding a string or translation
 
@@ -68,6 +68,20 @@ It prints per-file word error rate, real-time factor and peak memory. Keep recor
 
 Every merge to `main` releases automatically. `.github/workflows/release.yml` picks the next version from the conventional commits since the last tag (`feat:` or a `!` breaking change bumps the minor version, anything else bumps the patch), builds the app, packages the DMG and publishes a GitHub Release marked Latest, which creates the tag. To choose a version yourself, push a `vX.Y.Z` tag instead. Without signing secrets the release is ad-hoc signed and not notarized, but still marked Latest. To sign and notarize, add these repository secrets: `DEVELOPER_ID_CERT_BASE64`, `DEVELOPER_ID_CERT_PASSWORD`, `NOTARY_KEY_BASE64` (App Store Connect API key, `.p8`), `NOTARY_KEY_ID` and `NOTARY_ISSUER`.
 
+The app is signed with the hardened runtime and `macos/Lautli.entitlements`, which only grants `com.apple.security.device.audio-input`. No runtime exceptions are needed: the downloaded Python runs as a child process and is not subject to the app's library validation. The bundle ID is `io.github.ameetmadan.lautli`; keep it stable, because Screen Recording and Accessibility grants are tied to it and the signing identity.
+
+### Auto-update (Sparkle)
+
+Signed releases publish `appcast.xml` as a Release asset. The app reads `https://github.com/ameetmadan/lautli/releases/latest/download/appcast.xml` and checks automatically; **Check for updates…** in the menu checks on demand. Updates are verified with an EdDSA signature, and the app is only stamped for updating when the public key is known, so ad-hoc and development builds never start the updater.
+
+One-time setup:
+
+1. On a Mac, run `macos/.build/artifacts/sparkle/Sparkle/bin/generate_keys` after a `swift build --package-path macos`. It stores the private key in your login keychain and prints the public key.
+2. Add the public key as the repository **variable** `SPARKLE_PUBLIC_ED_KEY`.
+3. Export the private key with `generate_keys -x <file>` and store its contents as the repository **secret** `SPARKLE_PRIVATE_ED_KEY`. Keep a backup: if it is lost, installed apps can never be updated again.
+
+To test a feed locally, build with `SPARKLE_PUBLIC_ED_KEY=<key> SPARKLE_FEED_URL=<url> scripts/build_mac_app.sh` and generate the appcast with `scripts/make_appcast.sh`.
+
 ## Model and licensing
 
 The pinned checkpoint is `Flix-AI/flix-swissgerman-full` at revision `a9c347a904af5d31b28c537ac732e0618aed6136` (Apache-2.0). Do not substitute the CC-BY-NC Swiss German Turbo conversion for work meetings.
@@ -77,4 +91,4 @@ The pinned checkpoint is `Flix-AI/flix-swissgerman-full` at revision `a9c347a904
 - **Runtime.** First-run download of Python and libraries instead of bundling them. A bundled PyTorch means hundreds of unsigned libraries to sign and notarize and a multi-gigabyte DMG. The cost is a longer first launch and a network requirement.
 - **Apple Silicon only (macOS).** The model needs MPS to run in real time. Windows is tracked in #23 and is not available yet; its feasibility procedure and proposed approach are in [WINDOWS.md](WINDOWS.md). Linux is tracked in #1. Keep the worker portable: no POSIX-only imports (`resource`), no reliance on the console code page, and `LAUTLI_DEVICE=cpu|cuda|mps` to force a device.
 - **Echo.** No echo cancellation. The app documents headphones as the supported setup.
-- **Auto-update.** Not implemented. Sparkle needs a Developer ID signature and an EdDSA key; add it together with signing.
+- **Auto-update.** Sparkle, with the appcast hosted as a GitHub Release asset so no commit to `main` (and no extra release run) is needed per release. It is on only for signed releases that carry the EdDSA public key.

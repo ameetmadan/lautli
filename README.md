@@ -19,6 +19,8 @@ Early releases are not yet notarized by Apple, so Gatekeeper blocks the first la
 
 A Mac managed by your employer may block unnotarized apps entirely. Ask your IT team, or wait for a notarized release.
 
+Notarized releases open without this step and update themselves: lautli checks for new versions automatically, and **Check for updates…** in the menu checks on demand.
+
 ## First launch
 
 The app walks you through everything:
