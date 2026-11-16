@@ -1,0 +1,41 @@
+name: Windows feasibility
+
+# Loads the pinned model on a GitHub-hosted Windows runner (CPU only) and replays synthetic audio through the
+# live pipeline. This proves the worker starts and the model loads on Windows and records load time and memory.
+# It is NOT a go/no-go measurement: synthetic noise says nothing about recognition quality, and a hosted runner
+# is not the minimum-spec laptop. Real measurements are described in WINDOWS.md.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/windows-feasibility.yml
+      - scripts/windows_feasibility.py
+      - worker/lautli_worker/platform_support.py
+      - worker/lautli_worker/device.py
+      - requirements.txt
+
+jobs:
+  windows-cpu:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.15"
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Download the pinned model
+        run: python -m worker.lautli_worker.download_model "$env:RUNNER_TEMP\\model"
+      - name: Measure
+        run: python -m scripts.windows_feasibility --synthetic 40 --sources 2 --model "$env:RUNNER_TEMP\\model" | Tee-Object -FilePath feasibility.json
+      - name: Summary
+        if: always()
+        run: |
+          if (Test-Path feasibility.json) {
+            "``````json" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+            Get-Content feasibility.json | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+            "``````" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+          }

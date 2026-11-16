@@ -1,6 +1,5 @@
 import argparse
 import json
-import resource
 import time
 from pathlib import Path
 
@@ -10,7 +9,7 @@ from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
 from worker.lautli_worker.device import pick_device
 from worker.lautli_worker.model_spec import MODEL_ID, MODEL_REVISION
-
+from worker.lautli_worker.platform_support import peak_memory_bytes
 
 
 def load_audio(path: str | Path) -> tuple[np.ndarray, int]:
@@ -74,7 +73,7 @@ def transcribe(path: str | Path, model_path: str | Path) -> dict:
         "audio_seconds": round(audio_seconds, 2),
         "inference_seconds": round(inference_seconds, 2),
         "real_time_factor": round(audio_seconds / inference_seconds, 2),
-        "peak_rss_gb": round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024**3, 2),
+        "peak_rss_gb": round(peak_memory_bytes() / 1024**3, 2),
     }
 
 
