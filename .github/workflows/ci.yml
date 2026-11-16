@@ -21,3 +21,16 @@ jobs:
           cache: pip
       - run: python -m pip install -r requirements.txt pytest
       - run: python -m pytest -q
+  # The worker and its protocol are the part of lautli that is shared with Windows. The native Windows app
+  # does not exist yet, so only the Python side runs here.
+  python-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.15"
+          cache: pip
+      - run: python -m pip install -r requirements.txt pytest
+      - run: python -m pytest -q
+      - run: python -m scripts.windows_feasibility --hardware-only

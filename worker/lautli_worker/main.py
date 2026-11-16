@@ -10,6 +10,7 @@ from scripts.asr_probe import segment_records
 from worker.lautli_worker.cleanup import apply_replacements, collapse_repetitions, is_hallucination, parse_vocabulary
 from worker.lautli_worker.device import pick_device
 from worker.lautli_worker.model_spec import MODEL_ID, MODEL_REVISION
+from worker.lautli_worker.platform_support import configure_stdio
 from worker.lautli_worker.protocol import AudioWindow, ProtocolError, Stop, encode_message, parse_message
 from worker.lautli_worker.streaming import StreamingTranscriber, has_audio_energy
 
@@ -131,6 +132,7 @@ def file_window_events(message: AudioWindow, samples: list[float], recognize) ->
 
 
 def run() -> int:
+    configure_stdio()
     try:
         recognize = load_recognizer()
     except Exception as error:

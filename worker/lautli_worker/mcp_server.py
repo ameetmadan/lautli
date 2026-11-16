@@ -1,4 +1,4 @@
-"""Read-only MCP server over the transcripts lautli writes to ~/Documents/lautli.
+"""Read-only MCP server over the transcripts lautli writes to the Documents/lautli folder.
 
 Speaks newline-delimited JSON-RPC on stdio and uses only the standard library, so it runs in the
 app's existing Python runtime without changing requirements.txt (which would re-trigger setup).
@@ -49,8 +49,32 @@ class ToolError(Exception):
     pass
 
 
+def documents_folder() -> Path:
+    """The user's Documents folder. On Windows it is often redirected (OneDrive), so ask the shell, not the home path."""
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            class Guid(ctypes.Structure):
+                _fields_ = [("a", wintypes.DWORD), ("b", wintypes.WORD), ("c", wintypes.WORD), ("d", ctypes.c_ubyte * 8)]
+
+            # FOLDERID_Documents {FDD39AD0-238F-46AF-ADB4-6C85480369C7}
+            documents = Guid(0xFDD39AD0, 0x238F, 0x46AF, (ctypes.c_ubyte * 8)(0xAD, 0xB4, 0x6C, 0x85, 0x48, 0x03, 0x69, 0xC7))
+            path = ctypes.c_wchar_p()
+            shell32, ole32 = ctypes.WinDLL("shell32"), ctypes.WinDLL("ole32")
+            if shell32.SHGetKnownFolderPath(ctypes.byref(documents), 0, None, ctypes.byref(path)) == 0:
+                try:
+                    return Path(path.value)
+                finally:
+                    ole32.CoTaskMemFree(path)
+        except (OSError, AttributeError, ValueError):
+            pass
+    return Path.home() / "Documents"
+
+
 def transcript_folder() -> Path:
-    return Path(os.environ.get("LAUTLI_TRANSCRIPT_DIR") or Path.home() / "Documents" / "lautli")
+    return Path(os.environ.get("LAUTLI_TRANSCRIPT_DIR") or documents_folder() / "lautli")
 
 
 def meeting_ids(folder: Path) -> list[str]:
@@ -169,7 +193,7 @@ def main() -> None:
         sys.stdout.flush()
 
     sys.stdin.reconfigure(encoding="utf-8")
-    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stdout.reconfigure(encoding="utf-8", newline="\n")
     serve(sys.stdin, write, transcript_folder())
 
 

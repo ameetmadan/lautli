@@ -5,7 +5,7 @@
 - `macos/` is the Swift menu-bar app (capture, meeting detection, setup, UI).
 - `worker/lautli_worker/` is the Python transcription worker. The app talks to it with JSON lines over stdin/stdout.
 - `worker/lautli_worker/mcp_server.py` is the read-only MCP server AI apps connect to. It is standard library only on purpose: a new entry in `requirements.txt` changes the setup digest and sends every existing install back through dependency setup.
-- `scripts/` has the app, DMG and Sparkle appcast build scripts, the ASR probe and the WER tool.
+- `scripts/` has the app, DMG and Sparkle appcast build scripts, the ASR probe, the WER tool and `windows_feasibility.py`, which records hardware and measures whether a machine keeps pace with live transcription.
 
 The packaged app does not bundle Python or the model. On first launch `SetupManager` downloads a pinned [python-build-standalone](https://github.com/astral-sh/python-build-standalone) runtime, installs `requirements.txt` into it and downloads the pinned model into `~/Library/Application Support/lautli/`. Each step records a marker, so setup is safe to repeat.
 
@@ -16,6 +16,8 @@ swift test --package-path macos
 python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt pytest
 .venv/bin/python -m pytest -q
 ```
+
+The Python tests also run on `windows-latest` in CI. `python -m scripts.windows_feasibility --hardware-only` prints the machine report used for Windows feasibility.
 
 An opt-in test runs the whole first-run setup and loads the worker (downloads about 4 GB):
 
@@ -87,6 +89,6 @@ The pinned checkpoint is `Flix-AI/flix-swissgerman-full` at revision `a9c347a904
 ## Decisions
 
 - **Runtime.** First-run download of Python and libraries instead of bundling them. A bundled PyTorch means hundreds of unsigned libraries to sign and notarize and a multi-gigabyte DMG. The cost is a longer first launch and a network requirement.
-- **Apple Silicon only.** The model needs MPS to run in real time. Windows and Linux are tracked in #1, starting with the device-agnostic worker.
+- **Apple Silicon only (macOS).** The model needs MPS to run in real time. Windows is tracked in #23 and is not available yet; its feasibility procedure and proposed approach are in [WINDOWS.md](WINDOWS.md). Linux is tracked in #1. Keep the worker portable: no POSIX-only imports (`resource`), no reliance on the console code page, and `LAUTLI_DEVICE=cpu|cuda|mps` to force a device.
 - **Echo.** No echo cancellation. The app documents headphones as the supported setup.
 - **Auto-update.** Sparkle, with the appcast hosted as a GitHub Release asset so no commit to `main` (and no extra release run) is needed per release. It is on only for signed releases that carry the EdDSA public key.

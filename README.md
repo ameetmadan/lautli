@@ -7,7 +7,7 @@ A macOS menu-bar app that detects Zoom and Microsoft Teams meetings, transcribes
 1. Download `lautli-<version>.dmg` from the [latest release](../../releases/latest) and open it.
 2. Drag **lautli** to **Applications** and open it.
 
-**Requirements.** An Apple Silicon Mac (M1 or newer) on macOS 15 or newer, about 7 GB of free disk space and an internet connection for the first launch. Intel Macs are not supported. Standard German meeting notes additionally need macOS 26 or newer with Apple Intelligence turned on. Without it you still get the full transcript.
+**Requirements.** An Apple Silicon Mac (M1 or newer) on macOS 15 or newer, about 7 GB of free disk space and an internet connection for the first launch. Intel Macs are not supported. A Windows version is being evaluated and is not available yet; see [WINDOWS.md](WINDOWS.md). Standard German meeting notes additionally need macOS 26 or newer with Apple Intelligence turned on. Without it you still get the full transcript.
 
 ### If macOS refuses to open the app
 
