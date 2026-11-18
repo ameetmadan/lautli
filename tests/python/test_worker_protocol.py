@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from worker.lautli_worker.protocol import ProtocolError, parse_message, encode_message
+from worker.lautli_worker.protocol import ProtocolError, encode_message, parse_message
 
 
 def test_audio_window_accepts_valid_local_float32_payload():

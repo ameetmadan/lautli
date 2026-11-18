@@ -161,7 +161,7 @@ def benchmark(samples: np.ndarray, recognize: Callable[[list[float]], list[dict]
     for offset in range(0, len(samples) - window + 1, hop):
         chunk = samples[offset:offset + window].tolist()
         durations = []
-        for transcriber, name in zip(transcribers, names):
+        for transcriber, name in zip(transcribers, names, strict=True):
             started = clock()
             events = transcriber.process(int(offset * 1000 / SAMPLE_RATE_HZ), chunk, name)
             durations.append(clock() - started)

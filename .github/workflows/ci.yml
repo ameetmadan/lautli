@@ -5,6 +5,13 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   swift:
     runs-on: macos-26
@@ -17,9 +24,11 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.15"
+          python-version-file: .python-version
           cache: pip
-      - run: python -m pip install -r requirements.txt pytest
+          cache-dependency-path: requirements*.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - run: ruff check .
       - run: python -m pytest -q
   # The worker and its protocol are the part of lautli that is shared with Windows. The native Windows app
   # does not exist yet, so only the Python side runs here.
@@ -29,8 +38,9 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.15"
+          python-version-file: .python-version
           cache: pip
-      - run: python -m pip install -r requirements.txt pytest
+          cache-dependency-path: requirements*.txt
+      - run: python -m pip install -r requirements-dev.txt
       - run: python -m pytest -q
       - run: python -m scripts.windows_feasibility --hardware-only

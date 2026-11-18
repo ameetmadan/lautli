@@ -1,21 +1,35 @@
 import os
 import sys
 import uuid
+from collections.abc import Callable
 from typing import TextIO
 
 import numpy as np
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
 from scripts.asr_probe import segment_records
-from worker.lautli_worker.cleanup import apply_replacements, collapse_repetitions, is_hallucination, parse_vocabulary
+from worker.lautli_worker.cleanup import (
+    apply_replacements,
+    collapse_repetitions,
+    is_hallucination,
+    parse_vocabulary,
+)
 from worker.lautli_worker.device import pick_device
 from worker.lautli_worker.model_spec import MODEL_ID, MODEL_REVISION
 from worker.lautli_worker.platform_support import configure_stdio
-from worker.lautli_worker.protocol import AudioWindow, ProtocolError, Stop, encode_message, parse_message
+from worker.lautli_worker.protocol import (
+    AudioWindow,
+    ProtocolError,
+    Stop,
+    encode_message,
+    parse_message,
+)
 from worker.lautli_worker.streaming import StreamingTranscriber, has_audio_energy
 
+Recognizer = Callable[[list[float]], list[dict]]
 
-def load_recognizer():
+
+def load_recognizer() -> Recognizer:
     model_path = os.environ.get("WHISPER_MODEL_PATH", ".models/flix-swissgerman-full")
     print(encode_message({"type": "status", "state": "loading", "message": "Loading local Swiss German model"}), end="", flush=True)
     device, dtype = pick_device()
@@ -57,8 +71,8 @@ def load_recognizer():
     return recognize
 
 
-def serve(input_stream: TextIO, output_stream: TextIO, recognize) -> int:
-    def emit(value):
+def serve(input_stream: TextIO, output_stream: TextIO, recognize: Recognizer) -> int:
+    def emit(value: dict) -> None:
         output_stream.write(encode_message(value))
         output_stream.flush()
 
@@ -111,7 +125,7 @@ def serve(input_stream: TextIO, output_stream: TextIO, recognize) -> int:
     return 0
 
 
-def file_window_events(message: AudioWindow, samples: list[float], recognize) -> list[dict]:
+def file_window_events(message: AudioWindow, samples: list[float], recognize: Recognizer) -> list[dict]:
     """Commit a bounded, non-overlapping window before allowing its sender to advance."""
     duration_ms = message.sample_count * 1000 // message.sample_rate_hz
     events = []

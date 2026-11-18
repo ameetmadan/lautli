@@ -7,6 +7,7 @@ import json
 import os
 import re
 import sys
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 PROTOCOL_VERSION = "2025-03-26"
@@ -91,7 +92,7 @@ def started(meeting_id: str) -> str:
     return f"{match[1]} {match[2]}:{match[3]}:{match[4]}" if match else meeting_id
 
 
-def read_meeting(folder: Path, prefix: str, meeting_id) -> str:
+def read_meeting(folder: Path, prefix: str, meeting_id: object) -> str:
     if not isinstance(meeting_id, str) or meeting_id not in meeting_ids(folder):
         raise ToolError("Unknown meeting id. Call list_meetings for valid ids.")
     path = folder / f"{prefix}{meeting_id}.md"
@@ -141,7 +142,7 @@ def call_tool(folder: Path, name: str, arguments: dict) -> str:
     raise ToolError(f"Unknown tool {name}.")
 
 
-def handle(request: dict, folder: Path):
+def handle(request: dict, folder: Path) -> dict | None:
     """Returns the JSON-RPC response, or None for notifications."""
     method, request_id = request.get("method"), request.get("id")
     if request_id is None:
@@ -171,7 +172,7 @@ def handle(request: dict, folder: Path):
     return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
 
-def serve(lines, write, folder: Path) -> None:
+def serve(lines: Iterable[str], write: Callable[[str], object], folder: Path) -> None:
     for line in lines:
         if not line.strip():
             continue

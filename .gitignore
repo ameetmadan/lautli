@@ -9,3 +9,13 @@ macos/.build/
 .models/
 dist/
 docs/superpowers/
+
+# standards GIT-003 baseline
+.env
+.env.*
+!.env.example
+node_modules/
+build/
+.next/
+coverage/
+.ruff_cache/
