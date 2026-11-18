@@ -1,7 +1,7 @@
+import math
 import re
 import uuid
 from collections.abc import Callable
-import math
 
 
 def _key(text: str) -> str:

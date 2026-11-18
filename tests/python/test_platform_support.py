@@ -1,9 +1,7 @@
 import importlib
 import io
-import json
 import sys
 
-import numpy as np
 import pytest
 
 from worker.lautli_worker import device, mcp_server, platform_support
@@ -26,7 +24,7 @@ def test_asr_probe_and_worker_import_without_the_posix_resource_module(monkeypat
 
 
 def test_configure_stdio_forces_utf8_and_unix_newlines(monkeypatch):
-    raw_out, raw_in = io.BytesIO(), io.BytesIO("Grüezi\n".encode("utf-8"))
+    raw_out, raw_in = io.BytesIO(), io.BytesIO("Grüezi\n".encode())
     out = io.TextIOWrapper(raw_out, encoding="cp1252", newline="\r\n")
     stdin = io.TextIOWrapper(raw_in, encoding="cp1252")
     monkeypatch.setattr(sys, "stdout", out)
@@ -35,7 +33,7 @@ def test_configure_stdio_forces_utf8_and_unix_newlines(monkeypatch):
     platform_support.configure_stdio()
     sys.stdout.write("Grüezi ✓\n")
     sys.stdout.flush()
-    assert raw_out.getvalue() == "Grüezi ✓\n".encode("utf-8")
+    assert raw_out.getvalue() == "Grüezi ✓\n".encode()
     assert sys.stdin.readline() == "Grüezi\n"
 
 

@@ -1,4 +1,9 @@
-from worker.lautli_worker.cleanup import apply_replacements, collapse_repetitions, is_hallucination, parse_vocabulary
+from worker.lautli_worker.cleanup import (
+    apply_replacements,
+    collapse_repetitions,
+    is_hallucination,
+    parse_vocabulary,
+)
 
 
 def test_repetition_loops_are_collapsed_but_normal_doubles_survive():

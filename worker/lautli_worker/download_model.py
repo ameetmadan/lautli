@@ -3,9 +3,11 @@ import hashlib
 import json
 import sys
 import threading
+from collections.abc import Iterable
 from pathlib import Path
 
 from huggingface_hub import HfApi, snapshot_download
+from huggingface_hub.hf_api import RepoSibling
 
 from worker.lautli_worker.model_spec import MODEL_ID, MODEL_REVISION
 
@@ -18,7 +20,7 @@ def downloaded_bytes(target: Path) -> int:
     return sum(path.stat().st_size for path in target.rglob("*") if path.is_file() and path.suffix != ".lock")
 
 
-def verify(target: Path, files) -> None:
+def verify(target: Path, files: Iterable[RepoSibling]) -> None:
     for entry in files:
         path = target / entry.rfilename
         if not path.is_file() or path.stat().st_size != entry.size:

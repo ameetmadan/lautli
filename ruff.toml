@@ -1,0 +1,17 @@
+# PY-001 / PY-002. Pin ruff in requirements-dev.txt (fellowship-2025 uses ruff==0.17.2).
+target-version = "py310"
+line-length = 100
+
+[lint]
+select = [
+  "F",            # pyflakes
+  "E4", "E7", "E9", # pycodestyle errors that are never style-only
+  "B",            # bugbear: mutable defaults, loop closures, ...
+  "I",            # import order
+  "UP",           # pyupgrade to target-version syntax
+  "ANN001", "ANN201", "ANN202", # PY-002: typed function signatures
+]
+
+[lint.per-file-ignores]
+"tests/**" = ["ANN"]
+"test_*.py" = ["ANN"]
