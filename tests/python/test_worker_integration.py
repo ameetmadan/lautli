@@ -118,6 +118,46 @@ def test_file_stop_resets_session_before_live_or_another_file():
     assert [message["segment"]["start_ms"] for message in finals] == [50_000, 0, 0]
 
 
+def _marked_file_audio(start_ms, marker, session_id):
+    """A 20 s file window whose samples carry a marker, so output text identifies its input audio."""
+    import struct
+    payload = struct.pack("<f", marker) * 320_000
+    return {**_file_audio(start_ms, session_id), "samples_base64": base64.b64encode(payload).decode()}
+
+
+def _marker_recognizer(samples):
+    return [{"start_ms": 500, "end_ms": 1500, "text": f"audio-{samples[0]:g}"}]
+
+
+def _file_texts(messages, prefix="file"):
+    return [(m["segment"]["start_ms"], m["segment"]["text"]) for m in messages
+            if m["type"] == "segment" and m["session_id"].startswith(prefix)]
+
+
+def test_live_handoff_between_file_windows_neither_skips_duplicates_nor_mixes_text():
+    windows = [(0, 1.0), (20_000, 2.0), (40_000, 3.0)]
+    _, uninterrupted = _serve_messages(
+        [_marked_file_audio(start, marker, "file-a") for start, marker in windows]
+        + [{"type": "stop", "session_id": "file-a"}], _marker_recognizer)
+    # The queue yields after a window is acknowledged, stops its session, and resumes the
+    # next window under a new session id after the live meeting ends.
+    _, interrupted = _serve_messages([
+        _marked_file_audio(0, 1.0, "file-a"), _marked_file_audio(20_000, 2.0, "file-a"),
+        {"type": "stop", "session_id": "file-a"},
+        _audio(0, "meeting"), _audio(1000, "meeting"), {"type": "stop", "session_id": "meeting"},
+        _marked_file_audio(40_000, 3.0, "file-b"), {"type": "stop", "session_id": "file-b"},
+    ], _marker_recognizer)
+    expected = [(500, "audio-1"), (20_500, "audio-2"), (40_500, "audio-3")]
+    assert _file_texts(uninterrupted) == expected
+    assert _file_texts(interrupted) == expected
+    meeting = {m["segment"]["text"] for m in interrupted
+               if m["type"] == "segment" and m["session_id"] == "meeting"}
+    assert meeting == {"audio-0"}  # live audio only; no file text leaks into it
+    assert not meeting & {text for _, text in expected}
+    acknowledged = [(m["session_id"], m["start_ms"]) for m in interrupted if m["type"] == "window_complete"]
+    assert acknowledged == [("file-a", 0), ("file-a", 20_000), ("file-b", 40_000)]
+
+
 @pytest.mark.parametrize("first, second", [(_file_audio(0), _audio(1000, "file")),
                                           (_audio(0, "file"), _file_audio(1000))])
 def test_session_cannot_mix_live_and_file_windows(first, second):
